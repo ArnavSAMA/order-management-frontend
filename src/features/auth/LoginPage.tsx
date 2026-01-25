@@ -21,15 +21,15 @@ export default function LoginPage(){
                 <div className="mt-6 space-y-3">
                     <button 
                     onClick={()=> doLogin('clerk')}
-                    className="w-full rounded-lg bg-gray-900 px-4 py-3 text-white font-medium"
+                    className="w-full cursor-pointer rounded-lg bg-gray-900 px-4 py-3 text-white font-medium"
                     >Login as clerk(Admin)</button>
                     <button 
                     onClick={()=> doLogin('staff')}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 font-medium"
+                    className="w-full cursor-pointer rounded-lg border border-gray-300 px-4 py-3 font-medium"
                     >Login as Staff</button>
                     <button 
                     onClick={()=> doLogin('boss')}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 font-medium"
+                    className="w-full cursor-pointer rounded-lg border border-gray-300 px-4 py-3 font-medium"
                     >Login as Boss(President)</button>
                 </div>
             </div>
