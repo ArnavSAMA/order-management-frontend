@@ -24,16 +24,18 @@ export default function PcLayout() {
         <div className="min-h-screen bg-gray-50">
             {/* Top header */}
             <header className="border-b border-gray-200 bg-white ">
-                <div className="mx-auto flex max-x-7xl items-center justify-between px-6 py-4">
+                <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
                     <div>
                         <h1 className="text-lg font-semibold text-gray-900">Order Management</h1>
-                        <p className="test-sm text-gray-500">React+Vite</p>
+                        <p className="text-sm text-gray-500">React+Vite</p>
+                    </div>
+
+                    <div className="text-sm text-gray-600">
+                        Role: <span className="font-medium text-gray-900">Unknown</span>
                     </div>
                 </div>
 
-                <div className="text-sm text-gray-600">
-                    Role: <span className="font-medium text-gray-900">Unknown</span>
-                </div>
+                
             </header>
 
             {/* Body: sidebar+content */}
@@ -44,11 +46,12 @@ export default function PcLayout() {
                             Menu
                         </p>
 
-                        <div className="space-y-2 text-sm text-gray-700">
-                            <div className="rounded-lg bg-gray-100 px-3 py-2">Orders</div>
-                            <div className="rounded-lg bg-gray-100 px-3 py-2">New Order</div>
-                            <div className="rounded-lg bg-gray-100 px-3 py-2">Logout</div>
-                        </div>
+                        <nav className="space-y-2">
+                            <NavItem to="/orders" label="Orders" />
+                            <NavItem to="/orders/new" label="New Order" />
+                            <NavItem to="/login" label="Logout (temp)" />
+                        </nav>
+
                     </div>
                 </aside>
             
