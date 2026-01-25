@@ -1,4 +1,5 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { useNavigate, Outlet, NavLink } from "react-router-dom";
 
 function NavItem({ to, label}: { to: string; label: string}){
     return(
@@ -20,6 +21,14 @@ function NavItem({ to, label}: { to: string; label: string}){
 }
 
 export default function PcLayout() {
+    const { user, logout } = useAuth()
+    const navigate = useNavigate()
+
+    const handleLogout = () => {
+        logout()
+        navigate('/login')
+    }
+
     return(
         <div className="min-h-screen bg-gray-50">
             {/* Top header */}
@@ -31,7 +40,10 @@ export default function PcLayout() {
                     </div>
 
                     <div className="text-sm text-gray-600">
-                        Role: <span className="font-medium text-gray-900">Unknown</span>
+                        Role:{' '} 
+                        <span className="font-medium text-gray-900">
+                            {user ? user.role : 'Not logged in'}
+                        </span>
                     </div>
                 </div>
 
@@ -48,8 +60,16 @@ export default function PcLayout() {
 
                         <nav className="space-y-2">
                             <NavItem to="/orders" label="Orders" />
-                            <NavItem to="/orders/new" label="New Order" />
-                            <NavItem to="/login" label="Logout (temp)" />
+                            {user?.role === 'clerk' && (
+                                <NavItem to="/orders/new" label="New Order" />
+                            )}
+                            <button
+                                onClick={handleLogout}
+                                className="mt-4 w-full rounded-lg px-3 py-2 text-left text-sm font-medium
+                                 text-red-600 hover:bg-red-50 transition duration-300 ease-in-out"
+                            >
+                                Logout
+                            </button>
                         </nav>
 
                     </div>
