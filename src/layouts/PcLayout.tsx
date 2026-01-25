@@ -65,7 +65,7 @@ export default function PcLayout() {
                             )}
                             <button
                                 onClick={handleLogout}
-                                className="mt-4 w-full rounded-lg px-3 py-2 text-left text-sm font-medium
+                                className="mt-4 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm font-medium
                                  text-red-600 hover:bg-red-50 transition duration-300 ease-in-out"
                             >
                                 Logout
