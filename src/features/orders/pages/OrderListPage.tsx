@@ -1,7 +1,12 @@
 import StatusBadge from "@/components/common/StatusBadge."
 import { mockOrders } from "../mockOrders"
+import { useNavigate } from "react-router-dom"
+import { useRef } from "react"
+
 
 export default function OrderListPage(){
+    const navigate = useNavigate()
+    const rowRefs = useRef<(HTMLTableRowElement | null)[]>([])
     return(
         <div>
             <div className="flex items-center justify-between">
@@ -27,8 +32,25 @@ export default function OrderListPage(){
                     </thead>
 
                     <tbody className="divide-y divide-gray-200">
-                    {mockOrders.map((order) =>(
-                        <tr key={order.id} className="hover:bg-gray-50 duration-100 ease-in-out">
+                    {mockOrders.map((order, index) =>(
+                        <tr key={order.id} 
+                        ref={(el) => {rowRefs.current[index]=el}}
+                        tabIndex={0}
+                        onClick={() => navigate(`/orders/${order.id}`)}
+                        onKeyDown={(e) =>{
+                            if (e.key === 'Enter') {
+                                navigate(`/orders/${order.id}`)
+                            }
+                            if (e.key === 'ArrowDown') {
+                                e.preventDefault()
+                                rowRefs.current[index+1]?.focus()
+                            }
+                            if (e.key === 'ArrowUp') {
+                                e.preventDefault()
+                                rowRefs.current[index-1]?.focus()
+                            }
+                        }}
+                        className="cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 duration-100 ease-in-out">
                             <td className="px-4 py-3 font-medium text-gray-900">{order.customerName}</td>
                             <td className="px-4 py-3 text-gray-700">{order.itemName}</td>
                             <td className="px-4 py-3 text-gray-700">{order.quantity}</td>
