@@ -18,10 +18,10 @@ export const router = createBrowserRouter([
                 element: <PcLayout />,
                 children:[
                     { path:'orders', element: <OrderListPage />},
-                    { path:'orders/new', element: <NewOrderPage />},
+                    { path:'orders/:id', element: <OrderDetailPage />},
                     {
                         element: <ProtectedRoute allow={['clerk']} />,
-                        children: [{ path:'orders/:id', element: <OrderDetailPage />}],
+                        children: [{ path:'orders/new', element: <NewOrderPage />}],
                     },
                 ],
             },
