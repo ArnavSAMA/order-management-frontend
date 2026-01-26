@@ -32,14 +32,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (role: Role) => {
+    let name = "Demo User";
+
+    if (role === "staff") name = "Declan";
+    if (role === "clerk") name = "Demo Clerk";
+    if (role === "boss") name = "Boss";
+
     const nextUser: User = {
       id: "user001",
-      name: "Demo User",
+      name,
       role,
     };
+
     setUser(nextUser);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
   };
+
 
   const logout = () => {
     setUser(null);
