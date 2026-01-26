@@ -28,7 +28,7 @@ export default function StatusBadge({ status }: { status: OrderStatus }) {
   return (
     <span
       className={[
-        'inline-flex min-w-[5.5rem] items-center justify-center rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset',
+        'inline-flex min-w-22 items-center justify-center rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset',
         getStatusStyles(status),
       ].join(' ')}
     >
