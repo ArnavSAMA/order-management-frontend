@@ -7,6 +7,7 @@ import PcLayout from "../layouts/PcLayout"
 import OrderDetailPage from "../features/orders/pages/OrderDetailPage";
 import OrderListPage from "../features/orders/pages/OrderListPage";
 import NewOrderPage from "../features/orders/pages/NewOrderPage";
+import { OrdersProvider } from "@/features/orders/context/OrdersProvider";
 
 export const router = createBrowserRouter([
     {path:'/login', element: <LoginPage />},
@@ -15,7 +16,11 @@ export const router = createBrowserRouter([
         children:[
             {
                 path:'/',
-                element: <PcLayout />,
+                element: (
+                    <OrdersProvider>
+                        <PcLayout />
+                    </OrdersProvider>
+                ),
                 children:[
                     { path:'orders', element: <OrderListPage />},
                     { path:'orders/:id', element: <OrderDetailPage />},

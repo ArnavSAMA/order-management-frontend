@@ -1,20 +1,21 @@
 import { useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import StatusBadge from "@/components/common/StatusBadge";
-import { mockOrders } from "../mockOrders";
+import { useOrders } from "../context/OrdersProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import type { OrderStatus } from "../types";
 
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
 export default function OrderDetailPage() {
+    
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const role = user?.role;
-
-  const order = useMemo(() => mockOrders.find((o) => o.id === id), [id]);
+  const { orders, updateOrder, deleteOrder } = useOrders();
+  const order = useMemo(() => orders.find((o) => o.id === id), [id]);
 
   if (!order) {
     return (

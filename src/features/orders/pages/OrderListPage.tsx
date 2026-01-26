@@ -1,9 +1,10 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "@/components/common/StatusBadge";
-import { mockOrders } from "../mockOrders";
+import { useOrders } from "../context/OrdersProvider";
 
 export default function OrderListPage() {
+    const { orders } = useOrders();
   const navigate = useNavigate();
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
 
@@ -11,7 +12,7 @@ export default function OrderListPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-900">Orders</h1>
-        <p className="text-sm text-gray-500">{mockOrders.length} total</p>
+        <p className="text-sm text-gray-500">{orders.length} total</p>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -30,7 +31,7 @@ export default function OrderListPage() {
           </thead>
 
           <tbody className="divide-y divide-gray-200">
-            {mockOrders.map((order, index) => (
+            {orders.map((order, index) => (
               <tr
                 key={order.id}
                 ref={(el) => {
