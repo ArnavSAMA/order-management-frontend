@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { useOrders } from "../context/OrdersProvider";
 import type { Order, OrderStatus } from "../types";
-import { useAuth } from "@/app/providers/AuthProvider";
 
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
@@ -19,20 +19,24 @@ export default function NewOrderPage() {
   const { addOrder, orders } = useOrders();
   const { user } = useAuth();
 
-  // Clerk-only route guard already blocks others, but keep code safe:
   const createdBy = user?.name ?? "Unknown";
 
+  // Text fields
   const [customer, setCustomer] = useState("");
   const [orderDate, setOrderDate] = useState(todayYYYYMMDD());
   const [productName, setProductName] = useState("");
-  const [quantity, setQuantity] = useState<number>(1);
-  const [amount, setAmount] = useState<number>(0);
-  const [status, setStatus] = useState<OrderStatus>("unchecked");
   const [assignedTo, setAssignedTo] = useState<string>("");
   const [pdfUrl, setPdfUrl] = useState<string>("");
 
+  // IMPORTANT: keep numeric inputs as strings while typing (fixes backspace / typing issues)
+  const [quantity, setQuantity] = useState("1");
+  const [amount, setAmount] = useState("0");
+
+  const [status, setStatus] = useState<OrderStatus>("unchecked");
+  const [error, setError] = useState<string>("");
+
+  // Simple local id generation: max numeric id + 1 (works for mock/demo)
   const nextId = useMemo(() => {
-    // simple local id generation: max numeric id + 1 (works for mock)
     const nums = orders
       .map((o) => Number(o.id))
       .filter((n) => Number.isFinite(n));
@@ -40,25 +44,37 @@ export default function NewOrderPage() {
     return String(max + 1);
   }, [orders]);
 
-  const [error, setError] = useState<string>("");
-
-  const validate = () => {
+  const validateTextFields = () => {
     if (!customer.trim()) return "Customer is required.";
     if (!orderDate.trim()) return "Date is required.";
     if (!productName.trim()) return "Product name is required.";
-    if (!Number.isFinite(quantity) || quantity <= 0) return "Quantity must be > 0.";
-    if (!Number.isFinite(amount) || amount < 0) return "Amount must be ≥ 0.";
     return "";
   };
 
   const handleCreate = () => {
-    const msg = validate();
+    // 1) Validate required text fields
+    const msg = validateTextFields();
     if (msg) {
       setError(msg);
       return;
     }
+
+    // 2) Convert numeric strings → numbers and validate
+    const qtyNum = Number(quantity);
+    const amtNum = Number(amount);
+
+    if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
+      setError("Quantity must be > 0.");
+      return;
+    }
+    if (!Number.isFinite(amtNum) || amtNum < 0) {
+      setError("Amount must be ≥ 0.");
+      return;
+    }
+
     setError("");
 
+    // 3) Build the order object (audit fields included)
     const now = new Date();
     const createdAt = now.toISOString().replace("T", " ").slice(0, 19);
 
@@ -67,17 +83,19 @@ export default function NewOrderPage() {
       customer: customer.trim(),
       orderDate,
       productName: productName.trim(),
-      quantity,
-      amount,
+      quantity: qtyNum,
+      amount: amtNum,
       status,
-      assignedTo: assignedTo || undefined,
+      assignedTo: assignedTo ? assignedTo : undefined,
       pdfUrl: pdfUrl.trim() ? pdfUrl.trim() : undefined,
+
       createdAt,
       createdBy,
       updatedAt: createdAt,
       updatedBy: createdBy,
     };
 
+    // 4) Store update + redirect
     addOrder(newOrder);
     navigate("/orders");
   };
@@ -132,9 +150,10 @@ export default function NewOrderPage() {
         <Field label="Quantity" required>
           <input
             type="number"
+            inputMode="numeric"
             min={1}
             value={quantity}
-            onChange={(e) => setQuantity(Number(e.target.value))}
+            onChange={(e) => setQuantity(e.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
           />
         </Field>
@@ -142,9 +161,10 @@ export default function NewOrderPage() {
         <Field label="Amount (¥)" required>
           <input
             type="number"
+            inputMode="numeric"
             min={0}
             value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
+            onChange={(e) => setAmount(e.target.value)}
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
           />
         </Field>
@@ -190,6 +210,7 @@ export default function NewOrderPage() {
 
       <div className="mt-6 flex gap-3">
         <button
+          type="button"
           onClick={handleCreate}
           className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white"
         >
@@ -197,6 +218,7 @@ export default function NewOrderPage() {
         </button>
 
         <button
+          type="button"
           onClick={() => navigate("/orders")}
           className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
