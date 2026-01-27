@@ -67,6 +67,7 @@ export default function OrderDetailPage() {
     setProductName(order.productName);
     setAssignedTo(order.assignedTo ?? "");
   }, [order.customer, order.orderDate, order.productName, order.assignedTo]);
+  
 
   const isDirty = canEditAll
     ? customer.trim() !== order.customer ||
@@ -157,6 +158,27 @@ export default function OrderDetailPage() {
     }
     navigate("/orders");
   };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Ctrl+S / Cmd+S → Save
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (canEditStatus && isDirty) handleSave();
+        return;
+      }
+
+      // Esc → Back (respect unsaved changes logic)
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleBack();
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [canEditStatus, isDirty, handleBack, handleSave]);
+
 
 
   return (
