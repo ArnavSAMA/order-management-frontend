@@ -77,6 +77,17 @@ export default function OrderDetailPage() {
     ? status !== order.status
     : false;
 
+  useEffect(() => {
+    if (!isDirty) return;
+
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ""; // required for Chrome
+    };
+
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
 
 
   const handleSave = () => {
@@ -121,8 +132,6 @@ export default function OrderDetailPage() {
     alert("Saved");
   };
 
-
-
   const handleDelete = () => {
     const ok = window.confirm("Delete this order? This cannot be undone.");
     if (!ok) return;
@@ -130,6 +139,15 @@ export default function OrderDetailPage() {
     deleteOrder(order.id);
     navigate("/orders");
   };
+
+  const handleBack = () => {
+    if (isDirty) {
+      const ok = window.confirm("You have unsaved changes. Leave without saving?");
+      if (!ok) return;
+    }
+    navigate("/orders");
+  };
+
 
   return (
     <div>
@@ -342,9 +360,14 @@ export default function OrderDetailPage() {
 
       {/* Actions */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link to="/orders" className="text-sm text-blue-600 hover:underline">
-          ← Back to Orders
-        </Link>
+        <button
+          type="button"
+          onClick={handleBack}
+          className="text-sm cursor-pointer text-blue-600 hover:underline"
+        >
+          ← Back
+        </button>
+
 
         {canEditStatus && (
           <>
