@@ -41,15 +41,41 @@ export default function OrderDetailPage() {
   const [customer, setCustomer] = useState(order.customer);
   const [orderDate, setOrderDate] = useState(order.orderDate);
   const [productName, setProductName] = useState(order.productName);
-  const [quantity, setQuantity] = useState(order.quantity);
-  const [amount, setAmount] = useState(order.amount);
+  const [quantity, setQuantity] = useState(String(order.quantity));
+  const [amount, setAmount] = useState(String(order.amount));
   const [assignedTo, setAssignedTo] = useState(order.assignedTo ?? "");
   const [status, setStatus] = useState<OrderStatus>(order.status);
 
-  const handleSave = () => {
-    // Backend later — for now just prove UI wiring is correct
-    alert("Saved locally (API will be added later).");
-  };
+    const handleSave = () => {
+        const qtyNum = Number(quantity);
+        const amtNum = Number(amount);
+
+        if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
+            alert("Quantity must be > 0");
+            return;
+        }
+
+        if (!Number.isFinite(amtNum) || amtNum < 0) {
+            alert("Amount must be ≥ 0");
+            return;
+        }
+
+        // Now it's safe to save
+        updateOrder(order.id, {
+            quantity: qtyNum,
+            amount: amtNum,
+            customer,
+            productName,
+            orderDate,
+            assignedTo: assignedTo || undefined,
+            status,
+            updatedAt: new Date().toISOString().replace("T", " ").slice(0, 19),
+            updatedBy: user?.name ?? "Unknown",
+        });
+
+        alert("Saved successfully");
+    };
+
 
   const handleDelete = () => {
     const ok = window.confirm("Are you sure you want to delete this order?");
@@ -141,7 +167,7 @@ export default function OrderDetailPage() {
                 type="number"
                 min={1}
                 value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
+                onChange={(e) => setQuantity(String(e.target.value))}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
               />
             ) : (
@@ -161,7 +187,7 @@ export default function OrderDetailPage() {
                 type="number"
                 min={0}
                 value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
+                onChange={(e) => setAmount(String(e.target.value))}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
               />
             ) : (
@@ -277,7 +303,7 @@ export default function OrderDetailPage() {
           <>
             <button
               onClick={handleSave}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white"
+              className="rounded-lg cursor-pointer bg-gray-900 px-4 py-2 text-sm font-medium text-white"
             >
               Save Changes
             </button>
@@ -285,7 +311,7 @@ export default function OrderDetailPage() {
             {canDelete && (
               <button
                 onClick={handleDelete}
-                className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                className="rounded-lg cursor-pointer border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
               >
                 Delete Order
               </button>
