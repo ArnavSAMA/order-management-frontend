@@ -51,39 +51,76 @@ export default function OrderDetailPage() {
   useEffect(() => {
       setStatus(order.status);
     }, [order.status]);
+  useEffect(() => {
+    setQuantity(String(order.quantity));
+  }, [order.quantity]);
+
+  useEffect(() => {
+    setAmount(String(order.amount));
+    }, [order.amount]);
+    useEffect(() => {
+    setCustomer(order.customer);
+    setOrderDate(order.orderDate);
+    setProductName(order.productName);
+    setAssignedTo(order.assignedTo ?? "");
+  }, [order.customer, order.orderDate, order.productName, order.assignedTo]);
+
+  const isDirty = canEditAll
+    ? customer.trim() !== order.customer ||
+      orderDate !== order.orderDate ||
+      productName.trim() !== order.productName ||
+      Number(quantity) !== order.quantity ||
+      Number(amount) !== order.amount ||
+      (assignedTo || "") !== (order.assignedTo || "") ||
+      status !== order.status
+    : canEditStatus
+    ? status !== order.status
+    : false;
+
+
 
   const handleSave = () => {
-    if (!canEditAll) return;
+    // nobody can save anything if they can't edit status at least
+    if (!canEditStatus) return;
 
-    const qtyNum = Number(quantity);
-    const amtNum = Number(amount);
-
-    if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
-        alert("Quantity must be > 0");
-        return;
-    }
-
-    if (!Number.isFinite(amtNum) || amtNum < 0) {
-        alert("Amount must be ≥ 0");
-        return;
-    }
-
-    const updatedAt = new Date().toISOString().replace("T"," ").slice(0,19);
+    const updatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
     const updatedBy = user?.name ?? "Unknown";
 
-    updateOrder(order.id, {
-      customer:customer.trim(),
-      orderDate,
-      productName: productName.trim(),
-      quantity: qtyNum,
-      amount: amtNum,
-      assignedTo: assignedTo || undefined,
+    // staff: status only
+    const patch: Partial<typeof order> = {
       status,
       updatedAt,
       updatedBy,
-    })
+    };
+
+    // clerk: can edit all fields too
+    if (canEditAll) {
+      const qtyNum = Number(quantity);
+      const amtNum = Number(amount);
+
+      if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
+        alert("Quantity must be > 0");
+        return;
+      }
+      if (!Number.isFinite(amtNum) || amtNum < 0) {
+        alert("Amount must be ≥ 0");
+        return;
+      }
+
+      Object.assign(patch, {
+        customer: customer.trim(),
+        orderDate,
+        productName: productName.trim(),
+        quantity: qtyNum,
+        amount: amtNum,
+        assignedTo: assignedTo || undefined,
+      });
+    }
+
+    updateOrder(order.id, patch);
     alert("Saved");
   };
+
 
 
   const handleDelete = () => {
@@ -216,28 +253,16 @@ export default function OrderDetailPage() {
             {canEditStatus ? (
               <select
                 value={status}
-                onChange={(e) => {
-                  const next = e.target.value as OrderStatus;
-
-                  // update local UI immediately
-                  setStatus(next);
-
-                  // persist to store immediately
-                  updateOrder(order.id, {
-                    status: next,
-                    updatedAt: new Date().toISOString().replace("T", " ").slice(0, 19),
-                    updatedBy: user?.name ?? "Unknown",
-                  });
-                }}
+                onChange={(e) => setStatus(e.target.value as OrderStatus)}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
               >
-
                 <option value="unchecked">Unchecked</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="processing">Processing</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
+
             ) : (
               <StatusBadge status={status} />
             )}
@@ -321,25 +346,36 @@ export default function OrderDetailPage() {
           ← Back to Orders
         </Link>
 
-        {canEditAll && (
+        {canEditStatus && (
           <>
+            <p className="text-sm text-gray-500">
+              {isDirty ? "Unsaved changes" : "All changes saved"}
+            </p>
+
             <button
               onClick={handleSave}
-              className="rounded-lg cursor-pointer bg-gray-900 px-4 py-2 text-sm font-medium text-white"
+              disabled={!isDirty}
+              className={[
+                "rounded-lg px-4 py-2 text-sm font-medium",
+                isDirty
+                  ? "bg-gray-900 cursor-pointer text-white"
+                  : "cursor-not-allowed bg-gray-200 text-gray-500",
+              ].join(" ")}
             >
               Save Changes
             </button>
-
-            {canDelete && (
-              <button
-                onClick={handleDelete}
-                className="rounded-lg cursor-pointer border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-              >
-                Delete Order
-              </button>
-            )}
           </>
         )}
+
+        {canDelete && (
+          <button
+            onClick={handleDelete}
+            className="rounded-lg cursor-pointer border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+          >
+            Delete Order
+          </button>
+        )}
+
       </div>
     </div>
   );
