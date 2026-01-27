@@ -4,6 +4,9 @@ import StatusBadge from "@/components/common/StatusBadge";
 import { useOrders } from "../context/OrdersProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
 import type { OrderStatus } from "../types";
+import { nowYMDHMS } from "@/lib/datetime";
+import { canEditAll, canEditStatus, canDeleteOrder, canViewOrder } from "../permissions";
+
 
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
@@ -38,10 +41,9 @@ export default function OrderDetailPage() {
   
 
   // Permissions
-  const canEditAll = role === "clerk";
-  const canEditStatus = role === "clerk" || role === "staff";
-  const canDelete = role === "clerk";
-
+  const canEditAllFlag = canEditAll(user ?? null);
+  const canEditStatusFlag = canEditStatus(user ?? null, order);
+  const canDeleteFlag = canDeleteOrder(user ?? null);
   // Local editable state (backend later)
   const [customer, setCustomer] = useState(order.customer);
   const [orderDate, setOrderDate] = useState(order.orderDate);
@@ -69,7 +71,7 @@ export default function OrderDetailPage() {
   }, [order.customer, order.orderDate, order.productName, order.assignedTo]);
   
 
-  const isDirty = canEditAll
+  const isDirty = canEditAllFlag
     ? customer.trim() !== order.customer ||
       orderDate !== order.orderDate ||
       productName.trim() !== order.productName ||
@@ -77,7 +79,7 @@ export default function OrderDetailPage() {
       Number(amount) !== order.amount ||
       (assignedTo || "") !== (order.assignedTo || "") ||
       status !== order.status
-    : canEditStatus
+    : canEditStatusFlag
     ? status !== order.status
     : false;
 
@@ -96,9 +98,9 @@ export default function OrderDetailPage() {
 
   const handleSave = () => {
     // nobody can save anything if they can't edit status at least
-    if (!canEditStatus) return;
+    if (!canEditStatusFlag) return;
 
-    const updatedAt = new Date().toISOString().replace("T", " ").slice(0, 19);
+    const updatedAt = nowYMDHMS();
     const updatedBy = user?.name ?? "Unknown";
 
     // staff: status only
@@ -109,7 +111,7 @@ export default function OrderDetailPage() {
     };
 
     // clerk: can edit all fields too
-    if (canEditAll) {
+    if (canEditAllFlag) {
       const qtyNum = Number(quantity);
       const amtNum = Number(amount);
 
@@ -164,7 +166,7 @@ export default function OrderDetailPage() {
       // Ctrl+S / Cmd+S → Save
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (canEditStatus && isDirty) handleSave();
+        if (canEditStatusFlag && isDirty) handleSave();
         return;
       }
 
@@ -177,7 +179,7 @@ export default function OrderDetailPage() {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [canEditStatus, isDirty, handleBack, handleSave]);
+  }, [canEditStatusFlag, isDirty, handleBack, handleSave]);
 
 
 
@@ -217,7 +219,7 @@ export default function OrderDetailPage() {
             Customer
           </p>
           <div className="mt-2">
-            {canEditAll ? (
+            {canEditAllFlag ? (
               <input
                 value={customer}
                 onChange={(e) => setCustomer(e.target.value)}
@@ -235,7 +237,7 @@ export default function OrderDetailPage() {
             Date
           </p>
           <div className="mt-2">
-            {canEditAll ? (
+            {canEditAllFlag ? (
               <input
                 type="date"
                 value={orderDate}
@@ -254,7 +256,7 @@ export default function OrderDetailPage() {
             Product Name
           </p>
           <div className="mt-2">
-            {canEditAll ? (
+            {canEditAllFlag ? (
               <input
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
@@ -272,7 +274,7 @@ export default function OrderDetailPage() {
             Quantity
           </p>
           <div className="mt-2">
-            {canEditAll ? (
+            {canEditAllFlag ? (
               <input
                 type="number"
                 min={1}
@@ -292,7 +294,7 @@ export default function OrderDetailPage() {
             Amount (¥)
           </p>
           <div className="mt-2">
-            {canEditAll ? (
+            {canEditAllFlag ? (
               <input
                 type="number"
                 min={0}
@@ -314,7 +316,7 @@ export default function OrderDetailPage() {
             Status
           </p>
           <div className="mt-2">
-            {canEditStatus ? (
+            {canEditStatusFlag ? (
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as OrderStatus)}
@@ -331,7 +333,7 @@ export default function OrderDetailPage() {
               <StatusBadge status={status} />
             )}
 
-            {canEditStatus && (
+            {canEditStatusFlag && (
               <div className="mt-3">
                 <StatusBadge status={status} />
               </div>
@@ -345,7 +347,7 @@ export default function OrderDetailPage() {
             Assigned Staff
           </p>
           <div className="mt-2">
-            {canEditAll ? (
+            {canEditAllFlag ? (
               <select
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
@@ -415,7 +417,7 @@ export default function OrderDetailPage() {
         </button>
 
 
-        {canEditStatus && (
+        {canEditStatusFlag && (
           <>
             <p className="text-sm text-gray-500">
               {isDirty ? "Unsaved changes" : "All changes saved"}
@@ -436,7 +438,7 @@ export default function OrderDetailPage() {
           </>
         )}
 
-        {canDelete && (
+        {canDeleteFlag && (
           <button
             onClick={() => setConfirmDeleteOpen(true)}
             className="rounded-lg cursor-pointer border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"

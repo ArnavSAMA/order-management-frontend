@@ -1,38 +1,50 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import StatusBadge from "@/components/common/StatusBadge";
 import { useOrders } from "../context/OrdersProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import type { OrderStatus } from "../types";
-
-
+import { canViewOrder } from "../permissions";
 
 export default function OrderListPage() {
     const { orders } = useOrders();
     const { user } = useAuth();
     const role = user?.role;
-    const visibleOrders =
-    role === "staff"
-        ? orders.filter((o) => o.assignedTo === user?.name)
-        : orders;
+    const visibleOrders = orders.filter((o) => canViewOrder(user ?? null, o));
+    const location = useLocation();
+    const [toast, setToast] = useState<null | {
+    type: "success" | "error";
+    text: string;
+    }>(null);
 
+    useEffect(() => {
+        const state = location.state as any;
+
+        if (state?.toast) {
+            setToast(state.toast);
+            const t = window.setTimeout(() => setToast(null), 2000);
+
+            // clear router state so it doesn't reappear on back
+            window.history.replaceState({}, document.title);
+
+            return () => window.clearTimeout(t);
+        }
+    }, [location.state]);
     const [q, setQ] = useState("");
     const [statusFilter, setStatusFilter] = useState<"" | OrderStatus>("");
     const [sortKey, setSortKey] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc">("date_desc");
 
     const finalOrders = useMemo(() => {
-    const query = q.trim().toLowerCase();
-
-    let list = visibleOrders;
-
-    if (query) {
-        list = list.filter((o) => {
-        return (
-            o.id.toLowerCase().includes(query) ||
-            o.customer.toLowerCase().includes(query) ||
-            o.productName.toLowerCase().includes(query) ||
-            (o.assignedTo ?? "").toLowerCase().includes(query)
-        );
+        const query = q.trim().toLowerCase();
+        let list = visibleOrders;
+        if (query) {
+            list = list.filter((o) => {
+            return (
+                o.id.toLowerCase().includes(query) ||
+                o.customer.toLowerCase().includes(query) ||
+                o.productName.toLowerCase().includes(query) ||
+                (o.assignedTo ?? "").toLowerCase().includes(query)
+            );
         });
     }
 
@@ -111,6 +123,20 @@ export default function OrderListPage() {
                     </select>
                 </div>
             </div>
+
+            {toast && (
+                <div
+                    className={[
+                    "mt-4 rounded-xl border p-3 text-sm",
+                    toast.type === "success"
+                        ? "border-green-200 bg-green-50 text-green-700"
+                        : "border-red-200 bg-red-50 text-red-700",
+                    ].join(" ")}
+                >
+                    {toast.text}
+                </div>
+            )}
+
 
             {finalOrders.length === 0 ? (
                 <div className="mt-4 rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
