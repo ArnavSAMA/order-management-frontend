@@ -15,7 +15,7 @@ export default function OrderDetailPage() {
 
   const role = user?.role;
   const { orders, updateOrder, deleteOrder } = useOrders();
-  const order = useMemo(() => orders.find((o) => o.id === id), [id]);
+  const order = useMemo(() => orders.find((o) => o.id === id), [orders, id]);
 
   if (!order) {
     return (
@@ -60,28 +60,32 @@ export default function OrderDetailPage() {
             return;
         }
 
-        // Now it's safe to save
-        updateOrder(order.id, {
+        const patch: Partial<typeof order> ={
+          status,
+          updatedAt: new Date().toISOString().replace("T"," ").slice(0,19),
+          updatedBy: user?.name ?? "Unknown",
+        }
+
+        if(canEditAll) {
+          Object.assign(patch, {
+            customer:customer.trim(),
+            orderDate,
+            productName: productName.trim(),
             quantity: qtyNum,
             amount: amtNum,
-            customer,
-            productName,
-            orderDate,
             assignedTo: assignedTo || undefined,
-            status,
-            updatedAt: new Date().toISOString().replace("T", " ").slice(0, 19),
-            updatedBy: user?.name ?? "Unknown",
-        });
-
-        alert("Saved successfully");
+          })
+        }
+        updateOrder(order.id, patch);
+        alert("Saved");
     };
 
 
   const handleDelete = () => {
-    const ok = window.confirm("Are you sure you want to delete this order?");
+    const ok = window.confirm("Delete this order? This cannot be undone.");
     if (!ok) return;
 
-    alert("Delete will be implemented when backend exists.");
+    deleteOrder(order.id);
     navigate("/orders");
   };
 
@@ -167,7 +171,7 @@ export default function OrderDetailPage() {
                 type="number"
                 min={1}
                 value={quantity}
-                onChange={(e) => setQuantity(String(e.target.value))}
+                onChange={(e) => setQuantity(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
               />
             ) : (
@@ -187,7 +191,7 @@ export default function OrderDetailPage() {
                 type="number"
                 min={0}
                 value={amount}
-                onChange={(e) => setAmount(String(e.target.value))}
+                onChange={(e) => setAmount(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
               />
             ) : (
