@@ -8,6 +8,9 @@ import type { OrderStatus } from "../types";
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
 export default function OrderDetailPage() {
+
+  const [toast, setToast] = useState<null | { type: "success" | "error"; text: string }>(null);
+
     
   const { id } = useParams();
   const navigate = useNavigate();
@@ -110,12 +113,16 @@ export default function OrderDetailPage() {
       const amtNum = Number(amount);
 
       if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
-        alert("Quantity must be > 0");
+        setToast({ type: "error", text: "Quantity must be > 0" });
+        setTimeout(() => setToast(null), 2500);
         return;
+
       }
       if (!Number.isFinite(amtNum) || amtNum < 0) {
-        alert("Amount must be ≥ 0");
+        setToast({ type: "error", text: "Amount must be ≥ 0" });
+        setTimeout(() => setToast(null), 2500);
         return;
+
       }
 
       Object.assign(patch, {
@@ -129,8 +136,11 @@ export default function OrderDetailPage() {
     }
 
     updateOrder(order.id, patch);
-    alert("Saved");
+    setToast({ type: "success", text: "Saved successfully." });
+    setTimeout(() => setToast(null), 2000);
+
   };
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const handleDelete = () => {
     const ok = window.confirm("Delete this order? This cannot be undone.");
@@ -162,6 +172,20 @@ export default function OrderDetailPage() {
 
         <StatusBadge status={status} />
       </div>
+
+      {toast && (
+        <div
+          className={[
+            "mt-4 rounded-xl border p-3 text-sm",
+            toast.type === "success"
+              ? "border-green-200 bg-green-50 text-green-700"
+              : "border-red-200 bg-red-50 text-red-700",
+          ].join(" ")}
+        >
+          {toast.text}
+        </div>
+      )}
+
 
       {/* Main fields */}
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -392,13 +416,41 @@ export default function OrderDetailPage() {
 
         {canDelete && (
           <button
-            onClick={handleDelete}
+            onClick={() => setConfirmDeleteOpen(true)}
             className="rounded-lg cursor-pointer border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
           >
             Delete Order
           </button>
         )}
+        {confirmDeleteOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+              <h2 className="text-lg font-semibold text-gray-900">Delete order?</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                This action cannot be undone.
+              </p>
 
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setConfirmDeleteOpen(false)}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={() => {
+                    deleteOrder(order.id);
+                    navigate("/orders");
+                  }}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
