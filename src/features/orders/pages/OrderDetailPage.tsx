@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import StatusBadge from "@/components/common/StatusBadge";
 import { useOrders } from "../context/OrdersProvider";
@@ -12,6 +12,7 @@ export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
 
   const role = user?.role;
   const { orders, updateOrder, deleteOrder } = useOrders();
@@ -31,6 +32,7 @@ export default function OrderDetailPage() {
       </div>
     );
   }
+  
 
   // Permissions
   const canEditAll = role === "clerk";
@@ -46,39 +48,42 @@ export default function OrderDetailPage() {
   const [assignedTo, setAssignedTo] = useState(order.assignedTo ?? "");
   const [status, setStatus] = useState<OrderStatus>(order.status);
 
-    const handleSave = () => {
-        const qtyNum = Number(quantity);
-        const amtNum = Number(amount);
+  useEffect(() => {
+      setStatus(order.status);
+    }, [order.status]);
 
-        if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
-            alert("Quantity must be > 0");
-            return;
-        }
+  const handleSave = () => {
+    if (!canEditAll) return;
 
-        if (!Number.isFinite(amtNum) || amtNum < 0) {
-            alert("Amount must be ≥ 0");
-            return;
-        }
+    const qtyNum = Number(quantity);
+    const amtNum = Number(amount);
 
-        const patch: Partial<typeof order> ={
-          status,
-          updatedAt: new Date().toISOString().replace("T"," ").slice(0,19),
-          updatedBy: user?.name ?? "Unknown",
-        }
+    if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
+        alert("Quantity must be > 0");
+        return;
+    }
 
-        if(canEditAll) {
-          Object.assign(patch, {
-            customer:customer.trim(),
-            orderDate,
-            productName: productName.trim(),
-            quantity: qtyNum,
-            amount: amtNum,
-            assignedTo: assignedTo || undefined,
-          })
-        }
-        updateOrder(order.id, patch);
-        alert("Saved");
-    };
+    if (!Number.isFinite(amtNum) || amtNum < 0) {
+        alert("Amount must be ≥ 0");
+        return;
+    }
+
+    const updatedAt = new Date().toISOString().replace("T"," ").slice(0,19);
+    const updatedBy = user?.name ?? "Unknown";
+
+    updateOrder(order.id, {
+      customer:customer.trim(),
+      orderDate,
+      productName: productName.trim(),
+      quantity: qtyNum,
+      amount: amtNum,
+      assignedTo: assignedTo || undefined,
+      status,
+      updatedAt,
+      updatedBy,
+    })
+    alert("Saved");
+  };
 
 
   const handleDelete = () => {
@@ -211,9 +216,22 @@ export default function OrderDetailPage() {
             {canEditStatus ? (
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as OrderStatus)}
+                onChange={(e) => {
+                  const next = e.target.value as OrderStatus;
+
+                  // update local UI immediately
+                  setStatus(next);
+
+                  // persist to store immediately
+                  updateOrder(order.id, {
+                    status: next,
+                    updatedAt: new Date().toISOString().replace("T", " ").slice(0, 19),
+                    updatedBy: user?.name ?? "Unknown",
+                  });
+                }}
                 className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
               >
+
                 <option value="unchecked">Unchecked</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="processing">Processing</option>
