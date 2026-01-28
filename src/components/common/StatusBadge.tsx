@@ -2,27 +2,28 @@ import type { OrderStatus } from '@/features/orders/types'
 
 function getStatusStyles(status: OrderStatus) {
   switch (status) {
-    case 'unchecked':
-      return 'bg-red-100 text-red-700 ring-red-200'
+    case "unchecked":
+      return "bg-[#FF6B6B] text-white ring-[#FF6B6B]";
 
-    case 'confirmed':
-      return 'bg-yellow-100 text-yellow-800 ring-yellow-200'
+    case "confirmed":
+      return "bg-[#FFD93D] text-black ring-[#FFD93D]";
 
-    case 'processing':
-  // Green = active / in progress
-        return 'bg-emerald-100 text-emerald-700 ring-emerald-200'
+    case "processing":
+      // Blue-green = active / in progress
+      return "bg-[#6BCF7F] text-black ring-[#6BCF7F]";
 
-    case 'completed':
-    // Bluish = finished / stable
-        return 'bg-sky-100 text-sky-700 ring-sky-200'
+    case "completed":
+      // Green-blue = finished / stable
+      return "bg-[#00CEC8] text-black ring-[#00CEC8]";
 
-    case 'cancelled':
-      return 'bg-gray-100 text-gray-700 ring-gray-200'
+    case "cancelled":
+      return "bg-gray-200 text-black ring-gray-200";
 
     default:
-      return 'bg-gray-100 text-gray-700 ring-gray-200'
+      return "bg-gray-200 text-black ring-gray-200";
   }
 }
+
 
 export default function StatusBadge({ status }: { status: OrderStatus }) {
   return (
