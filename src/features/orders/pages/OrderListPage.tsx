@@ -35,8 +35,13 @@ export default function OrderListPage() {
     () => (searchParams.get("status") as any) ?? ""
   );
   const [sortKey, setSortKey] = useState<
-    "date_desc" | "date_asc" | "amount_desc" | "amount_asc"
-  >(() => (searchParams.get("sort") as any) ?? "date_desc");
+  | "date_desc"
+  | "date_asc"
+  | "amount_desc"
+  | "amount_asc"
+  | "id_asc"
+  | "id_desc"
+>(() => (searchParams.get("sort") as any) ?? "date_desc");
 
   const [staffFilter, setStaffFilter] = useState(() => searchParams.get("staff") ?? "");
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") ?? "");
@@ -148,16 +153,24 @@ export default function OrderListPage() {
     }
 
     // Sort
-    const byDate = (a: string, b: string) => a.localeCompare(b); // YYYY-MM-DD
+    const byDate = (a: string, b: string) => a.localeCompare(b);
     const byAmount = (a: number, b: number) => a - b;
+    const byId = (a: string, b: string) => Number(a) - Number(b); // works since your ids are numeric strings
+
+
 
     const sorted = [...list].sort((a, b) => {
-      if (sortKey === "date_desc") return byDate(b.orderDate, a.orderDate);
-      if (sortKey === "date_asc") return byDate(a.orderDate, b.orderDate);
-      if (sortKey === "amount_desc") return byAmount(b.amount, a.amount);
-      return byAmount(a.amount, b.amount);
-    });
+        if (sortKey === "date_desc") return byDate(b.orderDate, a.orderDate);
+        if (sortKey === "date_asc") return byDate(a.orderDate, b.orderDate);
 
+        if (sortKey === "amount_desc") return byAmount(b.amount, a.amount);
+        if (sortKey === "amount_asc") return byAmount(a.amount, b.amount);
+
+        if (sortKey === "id_desc") return byId(b.id, a.id);
+        if (sortKey === "id_asc") return byId(a.id, b.id);
+
+        return 0;
+    });
     return sorted;
   }, [
     visibleOrders,
@@ -326,6 +339,9 @@ export default function OrderListPage() {
             <option value="date_asc">Date (oldest)</option>
             <option value="amount_desc">Amount (high → low)</option>
             <option value="amount_asc">Amount (low → high)</option>
+            <option value="id_asc">Order ID (A → Z)</option>
+            <option value="id_desc">Order ID (Z → A)</option>
+
           </select>
         </div>
 
