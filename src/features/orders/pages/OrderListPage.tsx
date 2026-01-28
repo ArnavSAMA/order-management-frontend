@@ -7,12 +7,12 @@ import type { OrderStatus } from "../types";
 import { canViewOrder } from "../permissions";
 
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
+
 export default function OrderListPage() {
   const { orders } = useOrders();
   const { user } = useAuth();
   const role = user?.role;
-  
-
+  const isStaff = role === "staff";
 
   const visibleOrders = orders.filter((o) => canViewOrder(user ?? null, o));
 
@@ -23,11 +23,10 @@ export default function OrderListPage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
-  const [staffFilter, setStaffFilter] = useState(() => searchParams.get("staff") ?? "");
 
   const PAGE_SIZE = 10;
 
-  // init from URL
+  // init from URL (runs once on mount)
   const [page, setPage] = useState(() => Number(searchParams.get("page") ?? "1"));
   const [q, setQ] = useState(() => searchParams.get("q") ?? "");
   const [statusFilter, setStatusFilter] = useState<"" | OrderStatus>(
@@ -37,52 +36,69 @@ export default function OrderListPage() {
     "date_desc" | "date_asc" | "amount_desc" | "amount_asc"
   >(() => (searchParams.get("sort") as any) ?? "date_desc");
 
-    useEffect(() => {
-  const nextPage = Number(searchParams.get("page") ?? "1");
-  const nextQ = searchParams.get("q") ?? "";
-  const nextStatus = (searchParams.get("status") as any) ?? "";
-  const nextSort = (searchParams.get("sort") as any) ?? "date_desc";
-  const nextStaff = searchParams.get("staff") ?? "";
+  const [staffFilter, setStaffFilter] = useState(() => searchParams.get("staff") ?? "");
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") ?? "");
+  const [dateTo, setDateTo] = useState(() => searchParams.get("to") ?? "");
 
-  if (Number.isFinite(nextPage) && nextPage !== page) setPage(nextPage);
-  if (nextQ !== q) setQ(nextQ);
-  if (nextStatus !== statusFilter) setStatusFilter(nextStatus);
-  if (nextSort !== sortKey) setSortKey(nextSort);
-  if (nextStaff !== staffFilter) setStaffFilter(nextStaff);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [location.search]);
-
-
-
-  // keep URL synced with list state (page + filters + sort)
+  /**
+   * URL -> State (when back/forward changes querystring)
+   */
   useEffect(() => {
-  const next = new URLSearchParams(searchParams);
+    const nextPage = Number(searchParams.get("page") ?? "1");
+    const nextQ = searchParams.get("q") ?? "";
+    const nextStatus = (searchParams.get("status") as any) ?? "";
+    const nextSort = (searchParams.get("sort") as any) ?? "date_desc";
+    const nextStaff = searchParams.get("staff") ?? "";
+    const nextFrom = searchParams.get("from") ?? "";
+    const nextTo = searchParams.get("to") ?? "";
 
-  next.set("page", String(page));
-  next.set("sort", sortKey);
+    if (Number.isFinite(nextPage) && nextPage !== page) setPage(nextPage);
+    if (nextQ !== q) setQ(nextQ);
+    if (nextStatus !== statusFilter) setStatusFilter(nextStatus);
+    if (nextSort !== sortKey) setSortKey(nextSort);
+    if (nextStaff !== staffFilter) setStaffFilter(nextStaff);
+    if (nextFrom !== dateFrom) setDateFrom(nextFrom);
+    if (nextTo !== dateTo) setDateTo(nextTo);
 
-  if (q.trim()) next.set("q", q.trim());
-  else next.delete("q");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
-  if (statusFilter) next.set("status", statusFilter);
-  else next.delete("status");
+  /**
+   * State -> URL (keep querystring in sync)
+   */
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
 
-  if (staffFilter) next.set("staff", staffFilter);
-  else next.delete("staff");
+    next.set("page", String(page));
+    next.set("sort", sortKey);
 
-  const nextStr = next.toString();
-  const curStr = searchParams.toString();
+    if (q.trim()) next.set("q", q.trim());
+    else next.delete("q");
 
-  if (nextStr !== curStr) {
-    setSearchParams(next, { replace: true });
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [page, q, statusFilter, sortKey, staffFilter]);
+    if (statusFilter) next.set("status", statusFilter);
+    else next.delete("status");
 
+    if (staffFilter) next.set("staff", staffFilter);
+    else next.delete("staff");
 
+    if (dateFrom) next.set("from", dateFrom);
+    else next.delete("from");
 
-  // toast from navigation state
+    if (dateTo) next.set("to", dateTo);
+    else next.delete("to");
+
+    const nextStr = next.toString();
+    const curStr = searchParams.toString();
+
+    if (nextStr !== curStr) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, q, statusFilter, sortKey, staffFilter, dateFrom, dateTo]);
+
+  /**
+   * Toast from navigation state
+   */
   useEffect(() => {
     const state = location.state as any;
 
@@ -100,11 +116,19 @@ export default function OrderListPage() {
   const finalOrders = useMemo(() => {
     const query = q.trim().toLowerCase();
     let list = visibleOrders;
-    if (role !== "staff" && staffFilter) {
-        list = list.filter((o) => (o.assignedTo ?? "") === staffFilter);
+
+    // Assigned staff filter (non-staff only)
+    if (!isStaff && staffFilter) {
+      list = list.filter((o) => (o.assignedTo ?? "") === staffFilter);
     }
 
+    // Date range filter (non-staff only)
+    if (!isStaff) {
+      if (dateFrom) list = list.filter((o) => o.orderDate >= dateFrom);
+      if (dateTo) list = list.filter((o) => o.orderDate <= dateTo);
+    }
 
+    // Search
     if (query) {
       list = list.filter((o) => {
         return (
@@ -116,10 +140,12 @@ export default function OrderListPage() {
       });
     }
 
+    // Status filter
     if (statusFilter) {
       list = list.filter((o) => o.status === statusFilter);
     }
 
+    // Sort
     const byDate = (a: string, b: string) => a.localeCompare(b); // YYYY-MM-DD
     const byAmount = (a: number, b: number) => a - b;
 
@@ -131,14 +157,23 @@ export default function OrderListPage() {
     });
 
     return sorted;
-  }, [visibleOrders, q, statusFilter, sortKey]);
+  }, [
+    visibleOrders,
+    q,
+    statusFilter,
+    sortKey,
+    staffFilter,
+    dateFrom,
+    dateTo,
+    isStaff,
+  ]);
 
   const totalPages = Math.max(1, Math.ceil(finalOrders.length / PAGE_SIZE));
 
   // reset to first page when filters/sort change
   useEffect(() => {
     setPage(1);
-  }, [q, statusFilter, sortKey]);
+  }, [q, statusFilter, sortKey, staffFilter, dateFrom, dateTo]);
 
   // clamp page if list shrinks (e.g., delete last item on last page)
   useEffect(() => {
@@ -154,8 +189,15 @@ export default function OrderListPage() {
   const navigate = useNavigate();
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   rowRefs.current = [];
+  const handleClearFilters = () => {
+    setQ("");
+    setStatusFilter("");
+    setStaffFilter("");
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+    };
 
-  const isStaff = user?.role === "staff";
 
   return (
     <div>
@@ -163,8 +205,28 @@ export default function OrderListPage() {
         <h1 className="text-xl font-semibold text-gray-900">Orders</h1>
         <p className="text-sm text-gray-500">{finalOrders.length} total</p>
       </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-gray-500">
+            Tip: Filters are saved in the URL, so back/refresh keeps them.
+        </p>
 
-        <div className={["mt-4 grid gap-3", isStaff ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-4",].join(" ")}>
+        <button
+            type="button"
+            onClick={handleClearFilters}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+            Clear filters
+        </button>
+      </div>
+
+
+      <div
+        className={[
+          "mt-4 grid gap-3",
+          isStaff ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-rows-2 md:grid-cols-3",
+        ].join(" ")}
+      >
+        {/* Search */}
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
             Search
@@ -176,26 +238,29 @@ export default function OrderListPage() {
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
           />
         </div>
-        {role !== "staff" && (
-        <div>
+
+        {/* Assigned Staff (non-staff only) */}
+        {!isStaff && (
+          <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Assigned Staff
+              Assigned Staff
             </label>
             <select
-            value={staffFilter}
-            onChange={(e) => setStaffFilter(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
             >
-            <option value="">All</option>
-            {STAFF_OPTIONS.map((s) => (
+              <option value="">All</option>
+              {STAFF_OPTIONS.map((s) => (
                 <option key={s} value={s}>
-                {s}
+                  {s}
                 </option>
-            ))}
+              ))}
             </select>
-        </div>
+          </div>
         )}
 
+        {/* Status */}
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
             Status
@@ -214,6 +279,7 @@ export default function OrderListPage() {
           </select>
         </div>
 
+        {/* Sort */}
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
             Sort
@@ -229,6 +295,36 @@ export default function OrderListPage() {
             <option value="amount_asc">Amount (low → high)</option>
           </select>
         </div>
+
+        {/* Date From (non-staff only) */}
+        {!isStaff && (
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Date From
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+        )}
+
+        {/* Date To (non-staff only) */}
+        {!isStaff && (
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Date To
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+        )}
       </div>
 
       {toast && (
@@ -281,11 +377,11 @@ export default function OrderListPage() {
                   }
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                        e.preventDefault();
-                        navigate(`/orders/${order.id}`, {
+                      e.preventDefault();
+                      navigate(`/orders/${order.id}`, {
                         state: { from: location.pathname + location.search },
-                        });
-                        return;
+                      });
+                      return;
                     }
 
                     if (e.key === "ArrowDown") {
