@@ -16,6 +16,9 @@ export default function OrderListPage() {
     type: "success" | "error";
     text: string;
     }>(null);
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+
 
     useEffect(() => {
         const state = location.state as any;
@@ -35,35 +38,53 @@ export default function OrderListPage() {
     const [sortKey, setSortKey] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc">("date_desc");
 
     const finalOrders = useMemo(() => {
-        const query = q.trim().toLowerCase();
-        let list = visibleOrders;
-        if (query) {
-            list = list.filter((o) => {
-            return (
-                o.id.toLowerCase().includes(query) ||
-                o.customer.toLowerCase().includes(query) ||
-                o.productName.toLowerCase().includes(query) ||
-                (o.assignedTo ?? "").toLowerCase().includes(query)
-            );
+            const query = q.trim().toLowerCase();
+            let list = visibleOrders;
+            if (query) {
+                list = list.filter((o) => {
+                return (
+                    o.id.toLowerCase().includes(query) ||
+                    o.customer.toLowerCase().includes(query) ||
+                    o.productName.toLowerCase().includes(query) ||
+                    (o.assignedTo ?? "").toLowerCase().includes(query)
+                );
+            });
+        }
+
+        if (statusFilter) {
+            list = list.filter((o) => o.status === statusFilter);
+        }
+
+        const byDate = (a: string, b: string) => a.localeCompare(b); // YYYY-MM-DD
+        const byAmount = (a: number, b: number) => a - b;
+
+        const sorted = [...list].sort((a, b) => {
+            if (sortKey === "date_desc") return byDate(b.orderDate, a.orderDate);
+            if (sortKey === "date_asc") return byDate(a.orderDate, b.orderDate);
+            if (sortKey === "amount_desc") return byAmount(b.amount, a.amount);
+            return byAmount(a.amount, b.amount);
         });
-    }
 
-    if (statusFilter) {
-        list = list.filter((o) => o.status === statusFilter);
-    }
+        return sorted;
+        }, [visibleOrders, q, statusFilter, sortKey]
+    );
 
-    const byDate = (a: string, b: string) => a.localeCompare(b); // YYYY-MM-DD
-    const byAmount = (a: number, b: number) => a - b;
+    const totalPages = Math.max(1, Math.ceil(finalOrders.length / PAGE_SIZE));
 
-    const sorted = [...list].sort((a, b) => {
-        if (sortKey === "date_desc") return byDate(b.orderDate, a.orderDate);
-        if (sortKey === "date_asc") return byDate(a.orderDate, b.orderDate);
-        if (sortKey === "amount_desc") return byAmount(b.amount, a.amount);
-        return byAmount(a.amount, b.amount);
-    });
+    useEffect(() => {
+    setPage(1);
+    }, [q, statusFilter, sortKey]);
 
-    return sorted;
-    }, [visibleOrders, q, statusFilter, sortKey]);
+    useEffect(() => {
+    setPage((p) => Math.min(p, totalPages));
+    }, [totalPages]);
+
+    const paginatedOrders = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return finalOrders.slice(start, end);
+    }, [finalOrders, page]);
+
 
 
     const navigate = useNavigate();
@@ -161,7 +182,7 @@ export default function OrderListPage() {
                     </thead>
 
                     <tbody className="divide-y divide-gray-200">
-                        {finalOrders.map((order, index) => (
+                        {paginatedOrders.map((order, index) => (
                         <tr
                             key={order.id}
                             ref={(el) => {
@@ -222,6 +243,37 @@ export default function OrderListPage() {
                         ))}
                     </tbody>
                 </table>
+                <div className="flex items-center justify-between px-4 py-3 text-sm">
+                    <button
+                        disabled={page === 1}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        className={[
+                        "rounded-lg px-3 py-1",
+                        page === 1
+                            ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                            : "bg-white border border-gray-300 hover:bg-gray-50",
+                        ].join(" ")}
+                    >
+                        ← Prev
+                    </button>
+
+                    <span className="text-gray-600">
+                        Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+                    </span>
+
+                    <button
+                        disabled={page === totalPages}
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        className={[
+                        "rounded-lg px-3 py-1",
+                        page === totalPages
+                            ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                            : "bg-white border border-gray-300 hover:bg-gray-50",
+                        ].join(" ")}
+                    >
+                        Next →
+                    </button>
+                </div>
             </div>
         )}
 
