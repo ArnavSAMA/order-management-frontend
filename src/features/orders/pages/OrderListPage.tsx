@@ -6,10 +6,13 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import type { OrderStatus } from "../types";
 import { canViewOrder } from "../permissions";
 
+const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 export default function OrderListPage() {
   const { orders } = useOrders();
   const { user } = useAuth();
   const role = user?.role;
+  
+
 
   const visibleOrders = orders.filter((o) => canViewOrder(user ?? null, o));
 
@@ -20,6 +23,7 @@ export default function OrderListPage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const [staffFilter, setStaffFilter] = useState(() => searchParams.get("staff") ?? "");
 
   const PAGE_SIZE = 10;
 
@@ -34,41 +38,48 @@ export default function OrderListPage() {
   >(() => (searchParams.get("sort") as any) ?? "date_desc");
 
     useEffect(() => {
-        const nextPage = Number(searchParams.get("page") ?? "1");
-        const nextQ = searchParams.get("q") ?? "";
-        const nextStatus = (searchParams.get("status") as any) ?? "";
-        const nextSort = (searchParams.get("sort") as any) ?? "date_desc";
+  const nextPage = Number(searchParams.get("page") ?? "1");
+  const nextQ = searchParams.get("q") ?? "";
+  const nextStatus = (searchParams.get("status") as any) ?? "";
+  const nextSort = (searchParams.get("sort") as any) ?? "date_desc";
+  const nextStaff = searchParams.get("staff") ?? "";
 
-        if (Number.isFinite(nextPage) && nextPage !== page) setPage(nextPage);
-        if (nextQ !== q) setQ(nextQ);
-        if (nextStatus !== statusFilter) setStatusFilter(nextStatus);
-        if (nextSort !== sortKey) setSortKey(nextSort);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.search]);
+  if (Number.isFinite(nextPage) && nextPage !== page) setPage(nextPage);
+  if (nextQ !== q) setQ(nextQ);
+  if (nextStatus !== statusFilter) setStatusFilter(nextStatus);
+  if (nextSort !== sortKey) setSortKey(nextSort);
+  if (nextStaff !== staffFilter) setStaffFilter(nextStaff);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [location.search]);
+
 
 
   // keep URL synced with list state (page + filters + sort)
   useEffect(() => {
-    const next = new URLSearchParams(searchParams);
+  const next = new URLSearchParams(searchParams);
 
-    next.set("page", String(page));
-    next.set("sort", sortKey);
+  next.set("page", String(page));
+  next.set("sort", sortKey);
 
-    if (q.trim()) next.set("q", q.trim());
-    else next.delete("q");
+  if (q.trim()) next.set("q", q.trim());
+  else next.delete("q");
 
-    if (statusFilter) next.set("status", statusFilter);
-    else next.delete("status");
+  if (statusFilter) next.set("status", statusFilter);
+  else next.delete("status");
 
-    const nextStr = next.toString();
-    const curStr = searchParams.toString();
+  if (staffFilter) next.set("staff", staffFilter);
+  else next.delete("staff");
 
-    // only write if different (prevents loops)
-    if (nextStr !== curStr) {
-        setSearchParams(next, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, q, statusFilter, sortKey]);
+  const nextStr = next.toString();
+  const curStr = searchParams.toString();
+
+  if (nextStr !== curStr) {
+    setSearchParams(next, { replace: true });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [page, q, statusFilter, sortKey, staffFilter]);
+
 
 
   // toast from navigation state
@@ -89,6 +100,10 @@ export default function OrderListPage() {
   const finalOrders = useMemo(() => {
     const query = q.trim().toLowerCase();
     let list = visibleOrders;
+    if (role !== "staff" && staffFilter) {
+        list = list.filter((o) => (o.assignedTo ?? "") === staffFilter);
+    }
+
 
     if (query) {
       list = list.filter((o) => {
@@ -140,6 +155,8 @@ export default function OrderListPage() {
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   rowRefs.current = [];
 
+  const isStaff = user?.role === "staff";
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -147,7 +164,7 @@ export default function OrderListPage() {
         <p className="text-sm text-gray-500">{finalOrders.length} total</p>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className={["mt-4 grid gap-3", isStaff ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-4",].join(" ")}>
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
             Search
@@ -159,6 +176,25 @@ export default function OrderListPage() {
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
           />
         </div>
+        {role !== "staff" && (
+        <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Assigned Staff
+            </label>
+            <select
+            value={staffFilter}
+            onChange={(e) => setStaffFilter(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+            >
+            <option value="">All</option>
+            {STAFF_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                {s}
+                </option>
+            ))}
+            </select>
+        </div>
+        )}
 
         <div>
           <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
