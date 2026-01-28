@@ -5,6 +5,8 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useMemo, useRef, useState, useEffect } from "react";
 import type { OrderStatus } from "../types";
 import { canViewOrder } from "../permissions";
+import { toCSV, downloadTextFile } from "@/lib/csv";
+
 
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
@@ -197,6 +199,29 @@ export default function OrderListPage() {
     setDateTo("");
     setPage(1);
     };
+  const handleExportCSV = () => {
+    const rows = finalOrders.map((o) => ({
+        id: o.id,
+        orderDate: o.orderDate,
+        customer: o.customer,
+        productName: o.productName,
+        quantity: o.quantity,
+        amount: o.amount,
+        status: o.status,
+        assignedTo: o.assignedTo ?? "",
+        pdfUrl: o.pdfUrl ?? "",
+        createdAt: o.createdAt,
+        createdBy: o.createdBy,
+        updatedAt: o.updatedAt,
+        updatedBy: o.updatedBy,
+    }));
+
+  const csv = toCSV(rows);
+
+  const stamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  downloadTextFile(`orders_export_${stamp}.csv`, csv);
+};
+
 
 
   return (
@@ -210,16 +235,24 @@ export default function OrderListPage() {
             Tip: Filters are saved in the URL, so back/refresh keeps them.
         </p>
 
-        <button
+        <div className="flex items-center gap-2">
+            <button
+            type="button"
+            onClick={handleExportCSV}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+            Export CSV
+            </button>
+
+            <button
             type="button"
             onClick={handleClearFilters}
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
+            >
             Clear filters
-        </button>
-      </div>
-
-
+            </button>
+        </div>
+    </div>
       <div
         className={[
           "mt-4 grid gap-3",
