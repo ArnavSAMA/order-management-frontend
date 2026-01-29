@@ -41,7 +41,7 @@ export default function MobileLayout() {
 
             <button
               onClick={logout}
-              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-red-600 bg-red-100 px-3 py-2 text-xs font-medium text-red-600 hover:bg-gray-50"
             >
               Logout
             </button>

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import StatusBadge from "@/components/common/StatusBadge";
 import { useOrders } from "../context/OrdersProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -18,8 +18,9 @@ export default function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const location = useLocation();
+  const from = (location.state as any)?.from as string | undefined;
   
-
   const role = user?.role;
   const { orders, updateOrder, deleteOrder } = useOrders();
   const order = useMemo(() => orders.find((o) => o.id === id), [orders, id]);
@@ -29,16 +30,21 @@ export default function OrderDetailPage() {
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Order not found</h1>
         <p className="mt-2 text-sm text-gray-600">No order exists for ID: {id}</p>
-        <Link
-          to="/orders"
+
+        <button
+          type="button"
+          onClick={() => {
+            if (from) navigate(from);
+            else navigate(-1);
+          }}
           className="mt-4 inline-block text-sm text-blue-600 hover:underline"
         >
           ← Back to Orders
-        </Link>
+        </button>
       </div>
     );
   }
-  
+
 
   // Permissions
   const canEditAllFlag = canEditAll(user ?? null);
@@ -145,12 +151,18 @@ export default function OrderDetailPage() {
   };
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
+  const goBackToList = () => {
+      if (from) navigate(from);
+      else navigate("/orders");
+    };
+
   const handleDelete = () => {
     const ok = window.confirm("Delete this order? This cannot be undone.");
     if (!ok) return;
 
     deleteOrder(order.id);
-    navigate("/orders");
+    goBackToList();
+
   };
 
   const handleBack = () => {
@@ -158,8 +170,11 @@ export default function OrderDetailPage() {
       const ok = window.confirm("You have unsaved changes. Leave without saving?");
       if (!ok) return;
     }
-    navigate("/orders");
+
+    if (from) navigate(from);
+    else navigate(-1); // fallback if user opened detail directly
   };
+  
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -189,9 +204,6 @@ export default function OrderDetailPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Order #{order.id}</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Role: <span className="font-medium text-gray-900">{role}</span>
-          </p>
         </div>
 
         <StatusBadge status={status} />
@@ -389,7 +401,7 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Audit section */}
-      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4 sm:p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           Audit
         </p>
@@ -407,11 +419,11 @@ export default function OrderDetailPage() {
       </div>
 
       {/* Actions */}
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <button
           type="button"
           onClick={handleBack}
-          className="text-sm cursor-pointer text-blue-600 hover:underline"
+          className="text-m cursor-pointer text-blue-600 hover:underline"
         >
           ← Back
         </button>
@@ -419,7 +431,7 @@ export default function OrderDetailPage() {
 
         {canEditStatusFlag && (
           <>
-            <p className="text-sm text-gray-500">
+            <p className="text-m text-gray-500">
               {isDirty ? "Unsaved changes" : "All changes saved"}
             </p>
 
@@ -427,7 +439,7 @@ export default function OrderDetailPage() {
               onClick={handleSave}
               disabled={!isDirty}
               className={[
-                "rounded-lg px-4 py-2 text-sm font-medium",
+                "w-full sm:w-auto rounded-lg px-4 py-2 text-sm font-medium",
                 isDirty
                   ? "bg-gray-900 cursor-pointer text-white"
                   : "cursor-not-allowed bg-gray-200 text-gray-500",
@@ -441,14 +453,14 @@ export default function OrderDetailPage() {
         {canDeleteFlag && (
           <button
             onClick={() => setConfirmDeleteOpen(true)}
-            className="rounded-lg cursor-pointer border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            className="w-full sm:w-auto rounded-lg cursor-pointer border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
           >
             Delete Order
           </button>
         )}
         {confirmDeleteOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-lg">
               <h2 className="text-lg font-semibold text-gray-900">Delete order?</h2>
               <p className="mt-2 text-sm text-gray-600">
                 This action cannot be undone.
@@ -465,7 +477,7 @@ export default function OrderDetailPage() {
                 <button
                   onClick={() => {
                     deleteOrder(order.id);
-                    navigate("/orders");
+                    goBackToList();
                   }}
                   className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
                 >

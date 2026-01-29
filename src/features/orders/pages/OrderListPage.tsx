@@ -248,6 +248,7 @@ export default function OrderListPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            aria-label="Export orders as CSV"
             onClick={handleExportCSV}
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
@@ -257,6 +258,7 @@ export default function OrderListPage() {
           <button
             type="button"
             onClick={handleClearFilters}
+            aria-label="Clear all filters"
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Clear filters
@@ -544,7 +546,7 @@ function OrderCard({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50"
+      className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
     >
       <div className="flex items-start justify-between gap-3">
         <div>

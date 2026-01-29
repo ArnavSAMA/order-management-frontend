@@ -10,11 +10,15 @@ import NewOrderPage from "../features/orders/pages/NewOrderPage";
 import { OrdersProvider } from "@/features/orders/context/OrdersProvider";
 import AppShell from "@/layouts/AppShell";
 
+import ErrorPage from "@/pages/ErrorPage";
+
+
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
 
   {
     element: <ProtectedRoute />,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "/",

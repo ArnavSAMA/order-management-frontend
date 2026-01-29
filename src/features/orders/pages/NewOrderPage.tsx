@@ -97,7 +97,14 @@ export default function NewOrderPage() {
 
     // 4) Store update + redirect
     addOrder(newOrder);
-    navigate("/orders");
+    navigate("/orders", {
+      state: {
+        toast: {
+          type: "success",
+          text: "New order placed successfully.",
+        },
+      },
+    });
   };
 
   return (
