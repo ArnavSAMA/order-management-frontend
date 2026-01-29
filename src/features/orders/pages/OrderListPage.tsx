@@ -7,7 +7,6 @@ import type { OrderStatus } from "../types";
 import { canViewOrder } from "../permissions";
 import { toCSV, downloadTextFile } from "@/lib/csv";
 
-
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
 export default function OrderListPage() {
@@ -35,13 +34,13 @@ export default function OrderListPage() {
     () => (searchParams.get("status") as any) ?? ""
   );
   const [sortKey, setSortKey] = useState<
-  | "date_desc"
-  | "date_asc"
-  | "amount_desc"
-  | "amount_asc"
-  | "id_asc"
-  | "id_desc"
->(() => (searchParams.get("sort") as any) ?? "date_desc");
+    | "date_desc"
+    | "date_asc"
+    | "amount_desc"
+    | "amount_asc"
+    | "id_asc"
+    | "id_desc"
+  >(() => (searchParams.get("sort") as any) ?? "date_desc");
 
   const [staffFilter, setStaffFilter] = useState(() => searchParams.get("staff") ?? "");
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") ?? "");
@@ -113,7 +112,6 @@ export default function OrderListPage() {
       setToast(state.toast);
       const t = window.setTimeout(() => setToast(null), 2000);
 
-      // clear router state so it doesn't reappear on back
       window.history.replaceState({}, document.title);
 
       return () => window.clearTimeout(t);
@@ -152,25 +150,24 @@ export default function OrderListPage() {
       list = list.filter((o) => o.status === statusFilter);
     }
 
-    // Sort
+    // Sort helpers
     const byDate = (a: string, b: string) => a.localeCompare(b);
     const byAmount = (a: number, b: number) => a - b;
-    const byId = (a: string, b: string) => Number(a) - Number(b); // works since your ids are numeric strings
-
-
+    const byId = (a: string, b: string) => Number(a) - Number(b);
 
     const sorted = [...list].sort((a, b) => {
-        if (sortKey === "date_desc") return byDate(b.orderDate, a.orderDate);
-        if (sortKey === "date_asc") return byDate(a.orderDate, b.orderDate);
+      if (sortKey === "date_desc") return byDate(b.orderDate, a.orderDate);
+      if (sortKey === "date_asc") return byDate(a.orderDate, b.orderDate);
 
-        if (sortKey === "amount_desc") return byAmount(b.amount, a.amount);
-        if (sortKey === "amount_asc") return byAmount(a.amount, b.amount);
+      if (sortKey === "amount_desc") return byAmount(b.amount, a.amount);
+      if (sortKey === "amount_asc") return byAmount(a.amount, b.amount);
 
-        if (sortKey === "id_desc") return byId(b.id, a.id);
-        if (sortKey === "id_asc") return byId(a.id, b.id);
+      if (sortKey === "id_desc") return byId(b.id, a.id);
+      if (sortKey === "id_asc") return byId(a.id, b.id);
 
-        return 0;
+      return 0;
     });
+
     return sorted;
   }, [
     visibleOrders,
@@ -190,7 +187,7 @@ export default function OrderListPage() {
     setPage(1);
   }, [q, statusFilter, sortKey, staffFilter, dateFrom, dateTo]);
 
-  // clamp page if list shrinks (e.g., delete last item on last page)
+  // clamp page if list shrinks
   useEffect(() => {
     setPage((p) => Math.min(p, totalPages));
   }, [totalPages]);
@@ -204,6 +201,7 @@ export default function OrderListPage() {
   const navigate = useNavigate();
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   rowRefs.current = [];
+
   const handleClearFilters = () => {
     setQ("");
     setStatusFilter("");
@@ -211,31 +209,29 @@ export default function OrderListPage() {
     setDateFrom("");
     setDateTo("");
     setPage(1);
-    };
+  };
+
   const handleExportCSV = () => {
     const rows = finalOrders.map((o) => ({
-        id: o.id,
-        orderDate: o.orderDate,
-        customer: o.customer,
-        productName: o.productName,
-        quantity: o.quantity,
-        amount: o.amount,
-        status: o.status,
-        assignedTo: o.assignedTo ?? "",
-        pdfUrl: o.pdfUrl ?? "",
-        createdAt: o.createdAt,
-        createdBy: o.createdBy,
-        updatedAt: o.updatedAt,
-        updatedBy: o.updatedBy,
+      id: o.id,
+      orderDate: o.orderDate,
+      customer: o.customer,
+      productName: o.productName,
+      quantity: o.quantity,
+      amount: o.amount,
+      status: o.status,
+      assignedTo: o.assignedTo ?? "",
+      pdfUrl: o.pdfUrl ?? "",
+      createdAt: o.createdAt,
+      createdBy: o.createdBy,
+      updatedAt: o.updatedAt,
+      updatedBy: o.updatedBy,
     }));
 
-  const csv = toCSV(rows);
-
-  const stamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  downloadTextFile(`orders_export_${stamp}.csv`, csv);
-};
-
-
+    const csv = toCSV(rows);
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`orders_export_${stamp}.csv`, csv);
+  };
 
   return (
     <div>
@@ -243,29 +239,31 @@ export default function OrderListPage() {
         <h1 className="text-xl font-semibold text-gray-900">Orders</h1>
         <p className="text-sm text-gray-500">{finalOrders.length} total</p>
       </div>
+
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-gray-500">
-            Tip: Filters are saved in the URL, so back/refresh keeps them.
+          Tip: Filters are saved in the URL, so back/refresh keeps them.
         </p>
 
         <div className="flex items-center gap-2">
-            <button
+          <button
             type="button"
             onClick={handleExportCSV}
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          >
             Export CSV
-            </button>
+          </button>
 
-            <button
+          <button
             type="button"
             onClick={handleClearFilters}
             className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
+          >
             Clear filters
-            </button>
+          </button>
         </div>
-    </div>
+      </div>
+
       <div
         className={[
           "mt-4 grid gap-3",
@@ -341,7 +339,6 @@ export default function OrderListPage() {
             <option value="amount_asc">Amount (low → high)</option>
             <option value="id_asc">Order ID (A → Z)</option>
             <option value="id_desc">Order ID (Z → A)</option>
-
           </select>
         </div>
 
@@ -396,93 +393,110 @@ export default function OrderListPage() {
             : "No orders match your filters."}
         </div>
       ) : (
-        <div className="mt-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
-              <tr>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Product</th>
-                <th className="px-4 py-3">Qty</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Assigned</th>
-                <th className="px-4 py-3">FAX</th>
-              </tr>
-            </thead>
+        <div>
+          {/* Mobile: cards */}
+          <div className="mt-4 space-y-3 md:hidden">
+            {paginatedOrders.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onOpen={() =>
+                  navigate(`/orders/${order.id}`, {
+                    state: { from: location.pathname + location.search },
+                  })
+                }
+              />
+            ))}
+          </div>
 
-            <tbody className="divide-y divide-gray-200">
-              {paginatedOrders.map((order, index) => (
-                <tr
-                  key={order.id}
-                  ref={(el) => {
-                    rowRefs.current[index] = el;
-                  }}
-                  tabIndex={0}
-                  onClick={() =>
-                    navigate(`/orders/${order.id}`, {
-                      state: { from: location.pathname + location.search },
-                    })
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
+          {/* Desktop: table */}
+          <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 bg-white md:block">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Product</th>
+                  <th className="px-4 py-3">Qty</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Assigned</th>
+                  <th className="px-4 py-3">FAX</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-200">
+                {paginatedOrders.map((order, index) => (
+                  <tr
+                    key={order.id}
+                    ref={(el) => {
+                      rowRefs.current[index] = el;
+                    }}
+                    tabIndex={0}
+                    onClick={() =>
                       navigate(`/orders/${order.id}`, {
                         state: { from: location.pathname + location.search },
-                      });
-                      return;
+                      })
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        navigate(`/orders/${order.id}`, {
+                          state: { from: location.pathname + location.search },
+                        });
+                        return;
+                      }
 
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      rowRefs.current[
-                        Math.min(index + 1, paginatedOrders.length - 1)
-                      ]?.focus();
-                    }
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        rowRefs.current[
+                          Math.min(index + 1, paginatedOrders.length - 1)
+                        ]?.focus();
+                      }
 
-                    if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      rowRefs.current[Math.max(index - 1, 0)]?.focus();
-                    }
-                  }}
-                  className="cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                >
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {order.customer}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{order.orderDate}</td>
-                  <td className="px-4 py-3 text-gray-700">{order.productName}</td>
-                  <td className="px-4 py-3 text-gray-700">{order.quantity}</td>
-                  <td className="px-4 py-3 text-gray-700">
-                    ¥{order.amount.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={order.status} />
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {order.assignedTo ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {order.pdfUrl ? (
-                      <a
-                        href={order.pdfUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-blue-600 hover:underline"
-                      >
-                        PDF
-                      </a>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        rowRefs.current[Math.max(index - 1, 0)]?.focus();
+                      }
+                    }}
+                    className="cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  >
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {order.customer}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{order.orderDate}</td>
+                    <td className="px-4 py-3 text-gray-700">{order.productName}</td>
+                    <td className="px-4 py-3 text-gray-700">{order.quantity}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      ¥{order.amount.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={order.status} />
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{order.assignedTo ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {order.pdfUrl ? (
+                        <a
+                          href={order.pdfUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-blue-600 hover:underline"
+                        >
+                          PDF
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          <div className="flex items-center justify-between px-4 py-3 text-sm">
+          {/* Pagination */}
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm">
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -516,5 +530,50 @@ export default function OrderListPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function OrderCard({
+  order,
+  onOpen,
+}: {
+  order: any;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">{order.customer}</p>
+          <p className="mt-1 text-xs text-gray-500">
+            #{order.id} • {order.orderDate}
+          </p>
+        </div>
+
+        <StatusBadge status={order.status} />
+      </div>
+
+      <div className="mt-3 text-sm text-gray-700">
+        <p>
+          <span className="font-medium">Product:</span> {order.productName}
+        </p>
+        <p className="mt-1">
+          <span className="font-medium">Qty:</span> {order.quantity} •{" "}
+          <span className="font-medium">Amount:</span> ¥{order.amount.toLocaleString()}
+        </p>
+
+        <p className="mt-1">
+          <span className="font-medium">Assigned:</span> {order.assignedTo ?? "—"}
+        </p>
+      </div>
+
+      <div className="mt-3 text-xs text-gray-500">
+        {order.pdfUrl ? "FAX: PDF attached" : "FAX: —"}
+      </div>
+    </button>
   );
 }
