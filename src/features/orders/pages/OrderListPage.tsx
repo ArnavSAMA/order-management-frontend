@@ -5,7 +5,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useMemo, useRef, useState, useEffect } from "react";
 import type { OrderStatus } from "../types";
 import { canViewOrder } from "../permissions";
-import { toCSV, downloadTextFile } from "@/lib/csv";
+import { Filter } from 'lucide-react';
 
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
@@ -24,6 +24,7 @@ export default function OrderListPage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const PAGE_SIZE = 10;
 
@@ -45,6 +46,22 @@ export default function OrderListPage() {
   const [staffFilter, setStaffFilter] = useState(() => searchParams.get("staff") ?? "");
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") ?? "");
   const [dateTo, setDateTo] = useState(() => searchParams.get("to") ?? "");
+
+  // Collapsible filters (mobile)
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Auto-open filters if URL contains filters (nice UX when coming back via deep link)
+  useEffect(() => {
+    const hasAnyFilter =
+      !!(searchParams.get("q") ?? "").trim() ||
+      !!(searchParams.get("status") ?? "") ||
+      !!(searchParams.get("sort") ?? "") ||
+      !!(searchParams.get("staff") ?? "") ||
+      !!(searchParams.get("from") ?? "") ||
+      !!(searchParams.get("to") ?? "");
+    if (hasAnyFilter) setFiltersOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * URL -> State (when back/forward changes querystring)
@@ -84,14 +101,21 @@ export default function OrderListPage() {
     if (statusFilter) next.set("status", statusFilter);
     else next.delete("status");
 
-    if (staffFilter) next.set("staff", staffFilter);
-    else next.delete("staff");
+    if (!isStaff) {
+      if (staffFilter) next.set("staff", staffFilter);
+      else next.delete("staff");
 
-    if (dateFrom) next.set("from", dateFrom);
-    else next.delete("from");
+      if (dateFrom) next.set("from", dateFrom);
+      else next.delete("from");
 
-    if (dateTo) next.set("to", dateTo);
-    else next.delete("to");
+      if (dateTo) next.set("to", dateTo);
+      else next.delete("to");
+    } else {
+      // staff shouldn't carry these filters in URL
+      next.delete("staff");
+      next.delete("from");
+      next.delete("to");
+    }
 
     const nextStr = next.toString();
     const curStr = searchParams.toString();
@@ -100,7 +124,7 @@ export default function OrderListPage() {
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, q, statusFilter, sortKey, staffFilter, dateFrom, dateTo]);
+  }, [page, q, statusFilter, sortKey, staffFilter, dateFrom, dateTo, isStaff]);
 
   /**
    * Toast from navigation state
@@ -112,6 +136,7 @@ export default function OrderListPage() {
       setToast(state.toast);
       const t = window.setTimeout(() => setToast(null), 2000);
 
+      // clear router state so it doesn't reappear on back
       window.history.replaceState({}, document.title);
 
       return () => window.clearTimeout(t);
@@ -150,7 +175,7 @@ export default function OrderListPage() {
       list = list.filter((o) => o.status === statusFilter);
     }
 
-    // Sort helpers
+    // Sort
     const byDate = (a: string, b: string) => a.localeCompare(b);
     const byAmount = (a: number, b: number) => a - b;
     const byId = (a: string, b: string) => Number(a) - Number(b);
@@ -169,16 +194,7 @@ export default function OrderListPage() {
     });
 
     return sorted;
-  }, [
-    visibleOrders,
-    q,
-    statusFilter,
-    sortKey,
-    staffFilter,
-    dateFrom,
-    dateTo,
-    isStaff,
-  ]);
+  }, [visibleOrders, q, statusFilter, sortKey, staffFilter, dateFrom, dateTo, isStaff]);
 
   const totalPages = Math.max(1, Math.ceil(finalOrders.length / PAGE_SIZE));
 
@@ -198,40 +214,24 @@ export default function OrderListPage() {
     return finalOrders.slice(start, end);
   }, [finalOrders, page]);
 
-  const navigate = useNavigate();
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
   rowRefs.current = [];
 
   const handleClearFilters = () => {
     setQ("");
     setStatusFilter("");
+    setSortKey("date_desc");
     setStaffFilter("");
     setDateFrom("");
     setDateTo("");
     setPage(1);
   };
 
-  const handleExportCSV = () => {
-    const rows = finalOrders.map((o) => ({
-      id: o.id,
-      orderDate: o.orderDate,
-      customer: o.customer,
-      productName: o.productName,
-      quantity: o.quantity,
-      amount: o.amount,
-      status: o.status,
-      assignedTo: o.assignedTo ?? "",
-      pdfUrl: o.pdfUrl ?? "",
-      createdAt: o.createdAt,
-      createdBy: o.createdBy,
-      updatedAt: o.updatedAt,
-      updatedBy: o.updatedBy,
-    }));
-
-    const csv = toCSV(rows);
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadTextFile(`orders_export_${stamp}.csv`, csv);
-  };
+  const hasAnyFilter =
+    !!q.trim() ||
+    !!statusFilter ||
+    sortKey !== "date_desc" ||
+    (!isStaff && (!!staffFilter || !!dateFrom || !!dateTo));
 
   return (
     <div>
@@ -240,140 +240,170 @@ export default function OrderListPage() {
         <p className="text-sm text-gray-500">{finalOrders.length} total</p>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-gray-500">
-          Tip: Filters are saved in the URL, so back/refresh keeps them.
-        </p>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Export orders as CSV"
-            onClick={handleExportCSV}
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      {/* Filters header (mobile toggle) */}
+      <div className="mt-4 flex items-center justify-between md:hidden">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((v) => !v)}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-50 hover:border-gray-400"
+        >
+          {/* The Filter Icon (Funnel Shape) */}
+          <svg 
+            className={`w-4 h-4 transition-colors ${filtersOpen ? 'text-blue-600' : 'text-gray-500'}`} 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
           >
-            Export CSV
-          </button>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
 
-          <button
-            type="button"
-            onClick={handleClearFilters}
-            aria-label="Clear all filters"
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Clear filters
-          </button>
-        </div>
+          <span>Filters</span>
+
+          {hasAnyFilter && (
+            <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-bold text-white transition-opacity duration-300">
+              ON
+            </span>
+          )}
+
+          {/* Smooth rotating arrow */}
+          <span className={`ml-1 text-gray-400 transition-transform duration-300 ${filtersOpen ? "rotate-180" : "rotate-0"}`}>
+            ▼
+          </span>
+        </button>
       </div>
 
-      <div
-        className={[
-          "mt-4 grid gap-3",
-          isStaff ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-rows-2 md:grid-cols-3",
-        ].join(" ")}
-      >
-        {/* Search */}
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Search
-          </label>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Customer, product, id, staff..."
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-          />
-        </div>
-
-        {/* Assigned Staff (non-staff only) */}
-        {!isStaff && (
+      {/* Filters panel */}
+      <div className={["mt-3", filtersOpen ? "block " : "hidden", "md:block"].join(" ")}>
+        <div
+          className={[
+            "grid gap-3",
+            isStaff
+              ? "grid-cols-1 md:grid-cols-3"
+              : "grid-cols-1 md:grid-rows-2 md:grid-cols-3",
+          ].join(" ")}
+        >
+          {/* Search */}
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Assigned Staff
+              Search
+            </label>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Customer, product, id, staff..."
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+            />
+          </div>
+
+          {/* Assigned Staff (non-staff only) */}
+          {!isStaff && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Assigned Staff
+              </label>
+              <select
+                value={staffFilter}
+                onChange={(e) => setStaffFilter(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">All</option>
+                {STAFF_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Status */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Status
             </label>
             <select
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
             >
               <option value="">All</option>
-              {STAFF_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
+              <option value="unchecked">Unchecked</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="processing">Processing</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
-        )}
 
-        {/* Status */}
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Status
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-          >
-            <option value="">All</option>
-            <option value="unchecked">Unchecked</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-
-        {/* Sort */}
-        <div>
-          <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Sort
-          </label>
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as any)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-          >
-            <option value="date_desc">Date (newest)</option>
-            <option value="date_asc">Date (oldest)</option>
-            <option value="amount_desc">Amount (high → low)</option>
-            <option value="amount_asc">Amount (low → high)</option>
-            <option value="id_asc">Order ID (A → Z)</option>
-            <option value="id_desc">Order ID (Z → A)</option>
-          </select>
-        </div>
-
-        {/* Date From (non-staff only) */}
-        {!isStaff && (
+          {/* Sort */}
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Date From
+              Sort
             </label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as any)}
               className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-            />
+            >
+              <option value="date_desc">Date (newest)</option>
+              <option value="date_asc">Date (oldest)</option>
+              <option value="amount_desc">Amount (high → low)</option>
+              <option value="amount_asc">Amount (low → high)</option>
+              <option value="id_asc">Order ID (A → Z)</option>
+              <option value="id_desc">Order ID (Z → A)</option>
+            </select>
           </div>
-        )}
 
-        {/* Date To (non-staff only) */}
-        {!isStaff && (
-          <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Date To
-            </label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-            />
+          {/* Date From (non-staff only) */}
+          {!isStaff && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Date From
+              </label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              />
+            </div>
+          )}
+
+          {/* Date To (non-staff only) */}
+          {!isStaff && (
+            <div>
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Date To
+              </label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              />
+            </div>
+          )}
+        </div>
+        <div>
+          <p className="mt-3 text-xs text-gray-500 md:hidden">
+              Tip: Filters are saved in the URL, so back/refresh keeps them.
+          </p>
+        </div>
+
+        {/* ✅ Clear filters button — bottom, full width */}
+        {hasAnyFilter && (
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Clear filters
+            </button>
           </div>
         )}
       </div>
+
 
       {toast && (
         <div
@@ -395,7 +425,7 @@ export default function OrderListPage() {
             : "No orders match your filters."}
         </div>
       ) : (
-        <div>
+        <>
           {/* Mobile: cards */}
           <div className="mt-4 space-y-3 md:hidden">
             {paginatedOrders.map((order) => (
@@ -463,15 +493,11 @@ export default function OrderListPage() {
                     }}
                     className="cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {order.customer}
-                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{order.customer}</td>
                     <td className="px-4 py-3 text-gray-600">{order.orderDate}</td>
                     <td className="px-4 py-3 text-gray-700">{order.productName}</td>
                     <td className="px-4 py-3 text-gray-700">{order.quantity}</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      ¥{order.amount.toLocaleString()}
-                    </td>
+                    <td className="px-4 py-3 text-gray-700">¥{order.amount.toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={order.status} />
                     </td>
@@ -529,7 +555,7 @@ export default function OrderListPage() {
               Next →
             </button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -546,7 +572,7 @@ function OrderCard({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+      className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
