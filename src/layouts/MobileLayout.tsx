@@ -8,7 +8,7 @@ function Tab({ to, label }: { to: string; label: string }) {
       to={to}
       className={({ isActive }) =>
         [
-          "flex-1 rounded-xl px-3 py-2 text-center text-sm font-medium",
+          "flex-1 rounded-xl px-3 py-2 text-center text-sm font-medium transition",
           isActive ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100",
         ].join(" ")
       }
@@ -22,6 +22,7 @@ function Tab({ to, label }: { to: string; label: string }) {
 export default function MobileLayout() {
   const { user, logout } = useAuth();
   const role = user?.role ?? "unknown";
+  const isClerk = role === "clerk";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,8 +31,12 @@ export default function MobileLayout() {
         <div className="mx-auto max-w-3xl px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-base font-semibold text-gray-900">Order Management</h1>
-              <p className="text-xs text-gray-500">Role: {role}</p>
+              <h1 className="text-base font-semibold text-gray-900">
+                Order Management
+              </h1>
+              <p className="text-xs text-gray-500">
+                Role: <span className="font-medium text-gray-900">{role}</span>
+              </p>
             </div>
 
             <button
@@ -55,7 +60,7 @@ export default function MobileLayout() {
       <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200 bg-white">
         <div className="mx-auto flex max-w-3xl gap-2 px-3 py-2">
           <Tab to="/orders" label="Orders" />
-          <Tab to="/orders/new" label="New" />
+          {isClerk && <Tab to="/orders/new" label="New" />}
         </div>
       </nav>
     </div>
