@@ -8,7 +8,9 @@ import OrderListPage from "../features/orders/pages/OrderListPage";
 import NewOrderPage from "../features/orders/pages/NewOrderPage";
 
 import { OrdersProvider } from "@/features/orders/context/OrdersProvider";
-import AppShell from "@/layouts/AppShell";
+import ResponsiveLayout from "@/layouts/ResponsiveLayout";
+
+
 
 import ErrorPage from "@/pages/ErrorPage";
 
@@ -24,7 +26,7 @@ export const router = createBrowserRouter([
         path: "/",
         element: (
           <OrdersProvider>
-            <AppShell />
+            <ResponsiveLayout />
           </OrdersProvider>
         ),
         children: [
