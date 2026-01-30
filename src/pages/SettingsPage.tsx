@@ -4,17 +4,19 @@ import { useSettings } from "@/app/providers/SettingsProvider";
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { theme, toggleTheme, language, setLanguage } = useSettings();
+  
+  // Directly derive darkMode from the theme state
   const darkMode = theme === "dark";
 
   return (
-    <div className="transition-colors duration-300">
+    <div className="transition-colors duration-500">
       <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
         {t("settings.title")}
       </h1>
 
       <div className="mt-6 space-y-4">
-        {/* Dark mode */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 transition-colors duration-300">
+        {/* Appearance Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 transition-colors duration-500 dark:border-gray-800 dark:bg-gray-900">
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             {t("settings.appearance")}
           </p>
@@ -24,7 +26,7 @@ export default function SettingsPage() {
               {t("settings.darkMode")}
             </span>
 
-            {/* Custom Animated Toggle Switch */}
+            {/* Toggle Switch */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -42,20 +44,29 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Language */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 transition-colors duration-300">
+        {/* Language Section */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 transition-colors duration-500 dark:border-gray-800 dark:bg-gray-900">
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             {t("settings.language")}
           </p>
 
-          <select
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as any)}
-            className="mt-3 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-          >
-            <option value="ja">{t("settings.japanese")}</option>
-            <option value="en">{t("settings.english")}</option>
-          </select>
+          {/* Custom Select Wrapper to prevent out-of-bounds clipping */}
+          <div className="relative mt-3">
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as any)}
+              className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-700 outline-none transition-colors focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-200"
+            >
+              <option value="ja">{t("settings.japanese")}</option>
+              <option value="en">{t("settings.english")}</option>
+            </select>
+            {/* Custom Arrow Icon */}
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+              <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20">
+                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
     </div>

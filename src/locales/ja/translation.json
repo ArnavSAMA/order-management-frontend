@@ -2,17 +2,148 @@
   "app": {
     "title": "注文管理",
     "role": "役割",
-    "orders": "注文",
-    "newOrder": "新規",
+    "menu": "メニュー",
+    "orders": "注文一覧",
+    "newOrder": "新規注文",
     "settings": "設定",
     "logout": "ログアウト"
+  },
+  "roles": {
+    "clerk": "受付",
+    "staff": "スタッフ",
+    "boss": "管理者",
+    "unknown": "不明"
+  },
+  "nav": {
+    "orders": "注文",
+    "new": "新規作成",
+    "newOrder": "新規注文",
+    "settings": "設定"
   },
   "settings": {
     "title": "設定",
     "appearance": "外観",
     "darkMode": "ダークモード",
     "language": "言語",
-    "english": "英語",
-    "japanese": "日本語"
+    "japanese": "日本語",
+    "english": "English"
+  },
+  "orders": {
+    "title": "注文一覧",
+    "total": "件",
+    "noneAssigned": "担当の注文はありません。",
+    "noneMatch": "条件に一致する注文はありません。",
+    "table": {
+      "customer": "顧客",
+      "date": "日付",
+      "product": "商品",
+      "qty": "数量",
+      "amount": "金額",
+      "status": "状態",
+      "assigned": "担当",
+      "fax": "FAX"
+    },
+    "card": {
+      "product": "商品",
+      "qty": "数量",
+      "amount": "金額",
+      "assigned": "担当",
+      "faxAttached": "FAX: PDFあり",
+      "faxNone": "FAX: —"
+    }
+  },
+  "filters": {
+    "title": "フィルター",
+    "on": "ON",
+    "search": "検索",
+    "searchPlaceholder": "顧客、商品、ID、担当...",
+    "assigned": "担当スタッフ",
+    "status": "状態",
+    "sort": "並び替え",
+    "dateFrom": "開始日",
+    "dateTo": "終了日",
+    "clear": "クリア"
+  },
+  "sort": {
+    "date_desc": "日付（新しい順）",
+    "date_asc": "日付（古い順）",
+    "amount_desc": "金額（高い順）",
+    "amount_asc": "金額（安い順）",
+    "id_asc": "注文ID（昇順）",
+    "id_desc": "注文ID（降順）"
+  },
+  "status": {
+    "unchecked": "未確認",
+    "confirmed": "確認済み",
+    "processing": "処理中",
+    "completed": "完了",
+    "cancelled": "キャンセル"
+  },
+  "pagination": {
+    "prev": "← 前へ",
+    "next": "次へ →",
+    "page": "ページ",
+    "of": "/"
+  },
+  "common": {
+    "all": "すべて",
+    "back": "← 戻る",
+    "backToOrders": "← 注文一覧へ戻る",
+    "saveChanges": "変更を保存",
+    "savedSuccessfully": "保存されました。",
+    "delete": "削除",
+    "cancel": "キャンセル",
+    "unsavedChanges": "未保存の変更があります",
+    "allSaved": "すべての変更が保存されました",
+    "unsavedLeaveConfirm": "未保存の変更があります。保存せずに移動しますか？",
+    "unknown": "不明"
+  },
+  "validation": {
+    "customerRequired": "顧客名は必須です。",
+    "orderDateRequired": "注文日は必須です。",
+    "productNameRequired": "商品名は必須です。",
+    "quantityGtZero": "数量は0より大きい必要があります。",
+    "amountGteZero": "金額は0以上である必要があります。"
+  },
+  "order": {
+    "fields": {
+      "customer": "顧客名",
+      "date": "日付",
+      "productName": "商品名",
+      "quantity": "数量",
+      "amountYen": "金額 (¥)",
+      "status": "ステータス",
+      "assignedStaff": "担当スタッフ",
+      "faxPdf": "FAX / PDF"
+    },
+    "unassigned": "未割当",
+    "status": {
+      "unchecked": "未確認",
+      "confirmed": "確認済み",
+      "processing": "処理中",
+      "completed": "完了",
+      "cancelled": "キャンセル"
+    }
+  },
+  "newOrder": {
+    "title": "新規注文作成",
+    "create": "注文を作成",
+    "toastCreated": "新規注文が正常に作成されました。",
+    "idLabel": "ID: #{{id}}",
+    "pdfPlaceholder": "https://..."
+  },
+  "orderDetail": {
+    "title": "注文 #{{id}}",
+    "notFoundTitle": "注文が見つかりません",
+    "notFoundBody": "ID: {{id}} の注文は存在しません",
+    "openPdf": "PDFを開く",
+    "noPdf": "PDFはありません",
+    "auditTitle": "監査ログ",
+    "created": "作成日時:",
+    "updated": "更新日時:",
+    "by": "担当者:",
+    "deleteTitle": "注文を削除しますか？",
+    "deleteBody": "この操作は取り消せません。",
+    "deletedToast": "注文を削除しました。"
   }
 }
