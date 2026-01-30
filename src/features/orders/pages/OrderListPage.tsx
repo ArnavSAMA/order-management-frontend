@@ -1,15 +1,26 @@
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useMemo, useRef, useState, useEffect } from "react";
 import StatusBadge from "@/components/common/StatusBadge";
 import { useOrders } from "../context/OrdersProvider";
 import { useAuth } from "@/app/providers/AuthProvider";
-import { useMemo, useRef, useState, useEffect } from "react";
 import type { OrderStatus } from "../types";
 import { canViewOrder } from "../permissions";
-import { Filter } from 'lucide-react';
+import { Filter } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const STAFF_OPTIONS = ["Taro Tanaka", "Declan", "Hanako Yamada"];
 
+type SortKey =
+  | "date_desc"
+  | "date_asc"
+  | "amount_desc"
+  | "amount_asc"
+  | "id_asc"
+  | "id_desc";
+
 export default function OrderListPage() {
+  const { t } = useTranslation();
+
   const { orders } = useOrders();
   const { user } = useAuth();
   const role = user?.role;
@@ -34,14 +45,9 @@ export default function OrderListPage() {
   const [statusFilter, setStatusFilter] = useState<"" | OrderStatus>(
     () => (searchParams.get("status") as any) ?? ""
   );
-  const [sortKey, setSortKey] = useState<
-    | "date_desc"
-    | "date_asc"
-    | "amount_desc"
-    | "amount_asc"
-    | "id_asc"
-    | "id_desc"
-  >(() => (searchParams.get("sort") as any) ?? "date_desc");
+  const [sortKey, setSortKey] = useState<SortKey>(
+    () => (searchParams.get("sort") as any) ?? "date_desc"
+  );
 
   const [staffFilter, setStaffFilter] = useState(() => searchParams.get("staff") ?? "");
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") ?? "");
@@ -50,16 +56,16 @@ export default function OrderListPage() {
   // Collapsible filters (mobile)
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Auto-open filters if URL contains filters (nice UX when coming back via deep link)
+  // Auto-open filters if URL contains filters
   useEffect(() => {
-    const hasAnyFilter =
+    const hasAny =
       !!(searchParams.get("q") ?? "").trim() ||
       !!(searchParams.get("status") ?? "") ||
-      !!(searchParams.get("sort") ?? "") ||
+      (searchParams.get("sort") ?? "date_desc") !== "date_desc" ||
       !!(searchParams.get("staff") ?? "") ||
       !!(searchParams.get("from") ?? "") ||
       !!(searchParams.get("to") ?? "");
-    if (hasAnyFilter) setFiltersOpen(true);
+    if (hasAny) setFiltersOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,7 +117,6 @@ export default function OrderListPage() {
       if (dateTo) next.set("to", dateTo);
       else next.delete("to");
     } else {
-      // staff shouldn't carry these filters in URL
       next.delete("staff");
       next.delete("from");
       next.delete("to");
@@ -131,15 +136,11 @@ export default function OrderListPage() {
    */
   useEffect(() => {
     const state = location.state as any;
-
     if (state?.toast) {
       setToast(state.toast);
-      const t = window.setTimeout(() => setToast(null), 2000);
-
-      // clear router state so it doesn't reappear on back
+      const timer = window.setTimeout(() => setToast(null), 2000);
       window.history.replaceState({}, document.title);
-
-      return () => window.clearTimeout(t);
+      return () => window.clearTimeout(timer);
     }
   }, [location.state]);
 
@@ -147,18 +148,15 @@ export default function OrderListPage() {
     const query = q.trim().toLowerCase();
     let list = visibleOrders;
 
-    // Assigned staff filter (non-staff only)
     if (!isStaff && staffFilter) {
       list = list.filter((o) => (o.assignedTo ?? "") === staffFilter);
     }
 
-    // Date range filter (non-staff only)
     if (!isStaff) {
       if (dateFrom) list = list.filter((o) => o.orderDate >= dateFrom);
       if (dateTo) list = list.filter((o) => o.orderDate <= dateTo);
     }
 
-    // Search
     if (query) {
       list = list.filter((o) => {
         return (
@@ -170,12 +168,8 @@ export default function OrderListPage() {
       });
     }
 
-    // Status filter
-    if (statusFilter) {
-      list = list.filter((o) => o.status === statusFilter);
-    }
+    if (statusFilter) list = list.filter((o) => o.status === statusFilter);
 
-    // Sort
     const byDate = (a: string, b: string) => a.localeCompare(b);
     const byAmount = (a: number, b: number) => a - b;
     const byId = (a: string, b: string) => Number(a) - Number(b);
@@ -198,20 +192,17 @@ export default function OrderListPage() {
 
   const totalPages = Math.max(1, Math.ceil(finalOrders.length / PAGE_SIZE));
 
-  // reset to first page when filters/sort change
   useEffect(() => {
     setPage(1);
   }, [q, statusFilter, sortKey, staffFilter, dateFrom, dateTo]);
 
-  // clamp page if list shrinks
   useEffect(() => {
     setPage((p) => Math.min(p, totalPages));
   }, [totalPages]);
 
   const paginatedOrders = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
-    const end = start + PAGE_SIZE;
-    return finalOrders.slice(start, end);
+    return finalOrders.slice(start, start + PAGE_SIZE);
   }, [finalOrders, page]);
 
   const rowRefs = useRef<(HTMLTableRowElement | null)[]>([]);
@@ -234,10 +225,12 @@ export default function OrderListPage() {
     (!isStaff && (!!staffFilter || !!dateFrom || !!dateTo));
 
   return (
-    <div>
+    <div className="text-gray-900 dark:text-gray-100">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Orders</h1>
-        <p className="text-sm text-gray-500">{finalOrders.length} total</p>
+        <h1 className="text-xl font-semibold">{t("orders.title")}</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {finalOrders.length} {t("orders.total")}
+        </p>
       </div>
 
       {/* Filters header (mobile toggle) */}
@@ -245,68 +238,53 @@ export default function OrderListPage() {
         <button
           type="button"
           onClick={() => setFiltersOpen((v) => !v)}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 cursor-pointer transition-all duration-300 ease-in-out hover:bg-gray-50 hover:border-gray-400"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
         >
-          {/* The Filter Icon (Funnel Shape) */}
-          <svg 
-            className={`w-4 h-4 transition-colors ${filtersOpen ? 'text-blue-600' : 'text-gray-500'}`} 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-
-          <span>Filters</span>
-
+          <Filter className="h-4 w-4" />
+          <span>{t("filters.title")}</span>
           {hasAnyFilter && (
-            <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-bold text-white transition-opacity duration-300">
-              ON
+            <span className="rounded-full bg-gray-900 px-2 py-0.5 text-[10px] font-bold text-white dark:bg-gray-100 dark:text-gray-900">
+              {t("filters.on")}
             </span>
           )}
-
-          {/* Smooth rotating arrow */}
-          <span className={`ml-1 text-gray-400 transition-transform duration-300 ${filtersOpen ? "rotate-180" : "rotate-0"}`}>
+          <span className={["ml-1 transition-transform", filtersOpen ? "rotate-180" : "rotate-0"].join(" ")}>
             ▼
           </span>
         </button>
       </div>
 
       {/* Filters panel */}
-      <div className={["mt-3", filtersOpen ? "block " : "hidden", "md:block"].join(" ")}>
+      <div className={["mt-3", filtersOpen ? "block" : "hidden", "md:block"].join(" ")}>
         <div
           className={[
             "grid gap-3",
-            isStaff
-              ? "grid-cols-1 md:grid-cols-3"
-              : "grid-cols-1 md:grid-rows-2 md:grid-cols-3",
+            isStaff ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-rows-2 md:grid-cols-3",
           ].join(" ")}
         >
           {/* Search */}
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Search
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              {t("filters.search")}
             </label>
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Customer, product, id, staff..."
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              placeholder={t("filters.searchPlaceholder")}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
             />
           </div>
 
-          {/* Assigned Staff (non-staff only) */}
           {!isStaff && (
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Assigned Staff
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t("filters.assigned")}
               </label>
               <select
                 value={staffFilter}
                 onChange={(e) => setStaffFilter(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
               >
-                <option value="">All</option>
+                <option value="">{t("common.all")}</option>
                 {STAFF_OPTIONS.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -318,115 +296,106 @@ export default function OrderListPage() {
 
           {/* Status */}
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Status
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              {t("filters.status")}
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             >
-              <option value="">All</option>
-              <option value="unchecked">Unchecked</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="">{t("common.all")}</option>
+              <option value="unchecked">{t("status.unchecked")}</option>
+              <option value="confirmed">{t("status.confirmed")}</option>
+              <option value="processing">{t("status.processing")}</option>
+              <option value="completed">{t("status.completed")}</option>
+              <option value="cancelled">{t("status.cancelled")}</option>
             </select>
           </div>
 
           {/* Sort */}
           <div>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Sort
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              {t("filters.sort")}
             </label>
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as any)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             >
-              <option value="date_desc">Date (newest)</option>
-              <option value="date_asc">Date (oldest)</option>
-              <option value="amount_desc">Amount (high → low)</option>
-              <option value="amount_asc">Amount (low → high)</option>
-              <option value="id_asc">Order ID (A → Z)</option>
-              <option value="id_desc">Order ID (Z → A)</option>
+              <option value="date_desc">{t("sort.date_desc")}</option>
+              <option value="date_asc">{t("sort.date_asc")}</option>
+              <option value="amount_desc">{t("sort.amount_desc")}</option>
+              <option value="amount_asc">{t("sort.amount_asc")}</option>
+              <option value="id_asc">{t("sort.id_asc")}</option>
+              <option value="id_desc">{t("sort.id_desc")}</option>
             </select>
           </div>
 
-          {/* Date From (non-staff only) */}
           {!isStaff && (
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Date From
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t("filters.dateFrom")}
               </label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
               />
             </div>
           )}
 
-          {/* Date To (non-staff only) */}
           {!isStaff && (
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Date To
+              <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t("filters.dateTo")}
               </label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
               />
             </div>
           )}
         </div>
-        <div>
-          <p className="mt-3 text-xs text-gray-500 md:hidden">
-              Tip: Filters are saved in the URL, so back/refresh keeps them.
-          </p>
-        </div>
 
-        {/* ✅ Clear filters button — bottom, full width */}
         {hasAnyFilter && (
-          <div className="mt-4 flex justify-end">
+          <div className="mt-4">
             <button
               type="button"
               onClick={handleClearFilters}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
             >
-              Clear filters
+              {t("filters.clear")}
             </button>
           </div>
         )}
       </div>
 
-
+      {/* Toast */}
       {toast && (
         <div
           className={[
             "mt-4 rounded-xl border p-3 text-sm",
             toast.type === "success"
-              ? "border-green-200 bg-green-50 text-green-700"
-              : "border-red-200 bg-red-50 text-red-700",
+              ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-200"
+              : "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200",
           ].join(" ")}
         >
           {toast.text}
         </div>
       )}
 
+      {/* Empty state */}
       {finalOrders.length === 0 ? (
-        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
-          {role === "staff" && visibleOrders.length === 0
-            ? "No assigned orders."
-            : "No orders match your filters."}
+        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+          {role === "staff" && visibleOrders.length === 0 ? t("orders.noneAssigned") : t("orders.noneMatch")}
         </div>
       ) : (
         <>
-          {/* Mobile: cards */}
+          {/* Mobile cards */}
           <div className="mt-4 space-y-3 md:hidden">
             {paginatedOrders.map((order) => (
               <OrderCard
@@ -441,23 +410,23 @@ export default function OrderListPage() {
             ))}
           </div>
 
-          {/* Desktop: table */}
-          <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 bg-white md:block">
+          {/* Desktop table */}
+          <div className="mt-4 hidden overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 md:block">
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-300">
                 <tr>
-                  <th className="px-4 py-3">Customer</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Product</th>
-                  <th className="px-4 py-3">Qty</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Assigned</th>
-                  <th className="px-4 py-3">FAX</th>
+                  <th className="px-4 py-3">{t("orders.table.customer")}</th>
+                  <th className="px-4 py-3">{t("orders.table.date")}</th>
+                  <th className="px-4 py-3">{t("orders.table.product")}</th>
+                  <th className="px-4 py-3">{t("orders.table.qty")}</th>
+                  <th className="px-4 py-3">{t("orders.table.amount")}</th>
+                  <th className="px-4 py-3">{t("orders.table.status")}</th>
+                  <th className="px-4 py-3">{t("orders.table.assigned")}</th>
+                  <th className="px-4 py-3">{t("orders.table.fax")}</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                 {paginatedOrders.map((order, index) => (
                   <tr
                     key={order.id}
@@ -478,30 +447,28 @@ export default function OrderListPage() {
                         });
                         return;
                       }
-
                       if (e.key === "ArrowDown") {
                         e.preventDefault();
-                        rowRefs.current[
-                          Math.min(index + 1, paginatedOrders.length - 1)
-                        ]?.focus();
+                        rowRefs.current[Math.min(index + 1, paginatedOrders.length - 1)]?.focus();
                       }
-
                       if (e.key === "ArrowUp") {
                         e.preventDefault();
                         rowRefs.current[Math.max(index - 1, 0)]?.focus();
                       }
                     }}
-                    className="cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    className="cursor-pointer hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:hover:bg-gray-800 dark:focus:ring-gray-700"
                   >
-                    <td className="px-4 py-3 font-medium text-gray-900">{order.customer}</td>
-                    <td className="px-4 py-3 text-gray-600">{order.orderDate}</td>
-                    <td className="px-4 py-3 text-gray-700">{order.productName}</td>
-                    <td className="px-4 py-3 text-gray-700">{order.quantity}</td>
-                    <td className="px-4 py-3 text-gray-700">¥{order.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{order.customer}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{order.orderDate}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-200">{order.productName}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-200">{order.quantity}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-200">
+                      ¥{order.amount.toLocaleString()}
+                    </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={order.status} />
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{order.assignedTo ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-gray-200">{order.assignedTo ?? "—"}</td>
                     <td className="px-4 py-3">
                       {order.pdfUrl ? (
                         <a
@@ -509,12 +476,12 @@ export default function OrderListPage() {
                           target="_blank"
                           rel="noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="text-blue-600 hover:underline"
+                          className="text-blue-600 hover:underline dark:text-blue-400"
                         >
                           PDF
                         </a>
                       ) : (
-                        <span className="text-gray-400">—</span>
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
                       )}
                     </td>
                   </tr>
@@ -524,22 +491,25 @@ export default function OrderListPage() {
           </div>
 
           {/* Pagination */}
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm">
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-800 dark:bg-gray-900">
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               className={[
                 "rounded-lg px-3 py-1",
                 page === 1
-                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                  : "bg-white border border-gray-300 hover:bg-gray-50",
+                  ? "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
+                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800",
               ].join(" ")}
             >
-              ← Prev
+              {t("pagination.prev")}
             </button>
 
-            <span className="text-gray-600">
-              Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+            <span className="text-gray-600 dark:text-gray-300">
+              {t("pagination.page")}{" "}
+              <strong className="text-gray-900 dark:text-gray-100">{page}</strong>{" "}
+              {t("pagination.of")}{" "}
+              <strong className="text-gray-900 dark:text-gray-100">{totalPages}</strong>
             </span>
 
             <button
@@ -548,11 +518,11 @@ export default function OrderListPage() {
               className={[
                 "rounded-lg px-3 py-1",
                 page === totalPages
-                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                  : "bg-white border border-gray-300 hover:bg-gray-50",
+                  ? "cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
+                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800",
               ].join(" ")}
             >
-              Next →
+              {t("pagination.next")}
             </button>
           </div>
         </>
@@ -561,46 +531,40 @@ export default function OrderListPage() {
   );
 }
 
-function OrderCard({
-  order,
-  onOpen,
-}: {
-  order: any;
-  onOpen: () => void;
-}) {
+function OrderCard({ order, onOpen }: { order: any; onOpen: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50"
+      className="w-full rounded-2xl border border-gray-200 bg-white p-4 text-left hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-gray-900">{order.customer}</p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{order.customer}</p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             #{order.id} • {order.orderDate}
           </p>
         </div>
-
         <StatusBadge status={order.status} />
       </div>
 
-      <div className="mt-3 text-sm text-gray-700">
+      <div className="mt-3 text-sm text-gray-700 dark:text-gray-200">
         <p>
-          <span className="font-medium">Product:</span> {order.productName}
+          <span className="font-medium">{t("orders.card.product")}:</span> {order.productName}
         </p>
         <p className="mt-1">
-          <span className="font-medium">Qty:</span> {order.quantity} •{" "}
-          <span className="font-medium">Amount:</span> ¥{order.amount.toLocaleString()}
+          <span className="font-medium">{t("orders.card.qty")}:</span> {order.quantity} •{" "}
+          <span className="font-medium">{t("orders.card.amount")}:</span> ¥{order.amount.toLocaleString()}
         </p>
-
         <p className="mt-1">
-          <span className="font-medium">Assigned:</span> {order.assignedTo ?? "—"}
+          <span className="font-medium">{t("orders.card.assigned")}:</span> {order.assignedTo ?? "—"}
         </p>
       </div>
 
-      <div className="mt-3 text-xs text-gray-500">
-        {order.pdfUrl ? "FAX: PDF attached" : "FAX: —"}
+      <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+        {order.pdfUrl ? t("orders.card.faxAttached") : t("orders.card.faxNone")}
       </div>
     </button>
   );

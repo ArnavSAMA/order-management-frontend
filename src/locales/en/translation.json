@@ -1,0 +1,149 @@
+{
+  "app": {
+    "title": "Order Management",
+    "role": "Role",
+    "menu": "Menu",
+    "orders": "Order List",
+    "newOrder": "New Order",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "roles": {
+    "clerk": "Clerk",
+    "staff": "Staff",
+    "boss": "Manager",
+    "unknown": "Unknown"
+  },
+  "nav": {
+    "orders": "Orders",
+    "new": "New",
+    "newOrder": "New Order",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "darkMode": "Dark Mode",
+    "language": "Language",
+    "japanese": "日本語",
+    "english": "English"
+  },
+  "orders": {
+    "title": "Order List",
+    "total": "items",
+    "noneAssigned": "No orders assigned to you.",
+    "noneMatch": "No orders match your filters.",
+    "table": {
+      "customer": "Customer",
+      "date": "Date",
+      "product": "Product",
+      "qty": "Qty",
+      "amount": "Amount",
+      "status": "Status",
+      "assigned": "Assigned",
+      "fax": "FAX"
+    },
+    "card": {
+      "product": "Product",
+      "qty": "Qty",
+      "amount": "Amount",
+      "assigned": "Assigned",
+      "faxAttached": "FAX: PDF attached",
+      "faxNone": "FAX: —"
+    }
+  },
+  "filters": {
+    "title": "Filters",
+    "on": "ON",
+    "search": "Search",
+    "searchPlaceholder": "Customer, product, ID, staff...",
+    "assigned": "Assigned Staff",
+    "status": "Status",
+    "sort": "Sort",
+    "dateFrom": "Start Date",
+    "dateTo": "End Date",
+    "clear": "Clear"
+  },
+  "sort": {
+    "date_desc": "Date (Newest)",
+    "date_asc": "Date (Oldest)",
+    "amount_desc": "Amount (High to Low)",
+    "amount_asc": "Amount (Low to High)",
+    "id_asc": "Order ID (Ascending)",
+    "id_desc": "Order ID (Descending)"
+  },
+  "status": {
+    "unchecked": "Unchecked",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "pagination": {
+    "prev": "← Prev",
+    "next": "Next →",
+    "page": "Page",
+    "of": "of"
+  },
+  "common": {
+    "all": "all",
+    "back": "← Back",
+    "backToOrders": "← Back to Orders",
+    "saveChanges": "Save Changes",
+    "savedSuccessfully": "Saved successfully.",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "unsavedChanges": "Unsaved changes",
+    "allSaved": "All changes saved",
+    "unsavedLeaveConfirm": "You have unsaved changes. Leave without saving?",
+    "unknown": "Unknown"
+  },
+  "validation": {
+    "customerRequired": "Customer is required.",
+    "orderDateRequired": "Order date is required.",
+    "productNameRequired": "Product name is required.",
+    "quantityGtZero": "Quantity must be > 0.",
+    "amountGteZero": "Amount must be ≥ 0."
+  },
+  "order": {
+    "fields": {
+      "customer": "Customer",
+      "date": "Date",
+      "productName": "Product Name",
+      "quantity": "Quantity",
+      "amountYen": "Amount (¥)",
+      "status": "Status",
+      "assignedStaff": "Assigned Staff",
+      "faxPdf": "FAX / PDF"
+    },
+    "unassigned": "Unassigned",
+    "status": {
+      "unchecked": "Unchecked",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "newOrder": {
+    "title": "New Order",
+    "create": "Create Order",
+    "toastCreated": "New order placed successfully.",
+    "idLabel": "ID: #{{id}}",
+    "pdfPlaceholder": "https://..."
+  },
+  "orderDetail": {
+    "title": "Order #{{id}}",
+    "notFoundTitle": "Order not found",
+    "notFoundBody": "No order exists for ID: {{id}}",
+    "openPdf": "Open PDF",
+    "noPdf": "No PDF attached",
+    "auditTitle": "Audit",
+    "created": "Created:",
+    "updated": "Updated:",
+    "by": "by",
+    "deleteTitle": "Delete order?",
+    "deleteBody": "This action cannot be undone.",
+    "deletedToast": "Order deleted."
+  }
+}

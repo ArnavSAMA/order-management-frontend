@@ -9,9 +9,7 @@ import NewOrderPage from "../features/orders/pages/NewOrderPage";
 
 import { OrdersProvider } from "@/features/orders/context/OrdersProvider";
 import ResponsiveLayout from "@/layouts/ResponsiveLayout";
-
-
-
+import SettingsPage from "@/pages/SettingsPage";
 import ErrorPage from "@/pages/ErrorPage";
 
 
@@ -32,7 +30,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "orders", element: <OrderListPage /> },
           { path: "orders/:id", element: <OrderDetailPage /> },
-
+          { path: "settings", element: <SettingsPage /> },
           {
             element: <ProtectedRoute allow={["clerk"]} />,
             children: [{ path: "orders/new", element: <NewOrderPage /> }],

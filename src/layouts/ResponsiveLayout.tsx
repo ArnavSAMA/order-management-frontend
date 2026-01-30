@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import AppShell from "@/layouts/AppShell";
+import MobileLayout from "@/layouts/MobileLayout";
 import PcLayout from "@/layouts/PcLayout";
 
 function useMediaQuery(query: string) {
@@ -27,5 +27,5 @@ function useMediaQuery(query: string) {
 export default function ResponsiveLayout() {
   // Tailwind md breakpoint = 768px
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  return isDesktop ? <PcLayout /> : <AppShell />;
+  return isDesktop ? <PcLayout /> : <MobileLayout />;
 }
