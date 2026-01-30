@@ -1,0 +1,18 @@
+{
+  "app": {
+    "title": "注文管理",
+    "role": "役割",
+    "orders": "注文",
+    "newOrder": "新規",
+    "settings": "設定",
+    "logout": "ログアウト"
+  },
+  "settings": {
+    "title": "設定",
+    "appearance": "外観",
+    "darkMode": "ダークモード",
+    "language": "言語",
+    "english": "英語",
+    "japanese": "日本語"
+  }
+}

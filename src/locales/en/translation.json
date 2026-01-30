@@ -1,0 +1,19 @@
+{
+  "app": {
+    "title": "Order Management",
+    "role": "Role",
+    "orders": "Orders",
+    "newOrder": "New Order",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance":"Appearance",
+    "theme": "Theme",
+    "darkMode": "Dark mode",
+    "language": "Language",
+    "japanese": "Japanese",
+    "english": "English"
+  }
+}

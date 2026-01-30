@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+@theme {
+  /* This tells v4 to look for the .dark class instead of system settings */
+  --color-scheme: light dark;
+}
+
+/* Ensure the selector-based strategy is active */
+@custom-variant dark (&:where(.dark, .dark *));
